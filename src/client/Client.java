@@ -27,6 +27,7 @@ import javax.swing.SwingConstants;
 import javax.swing.JComboBox;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JTextArea;
+import java.awt.Font;
 
 public class Client extends JFrame {
 
@@ -38,6 +39,9 @@ public class Client extends JFrame {
 	private JLabel lblUsername;
 	private JLabel lblPassword;
 	private JLabel lblServerDown;
+	private JLabel lblLogIn;
+	private JButton btnGoToRegister;
+	private JLabel lblNoAccount;
 	
 	// App content pane
 	private JPanel appContentPane;
@@ -51,9 +55,20 @@ public class Client extends JFrame {
 	private JTextField textFilePath;
 	private JButton btnUpload;
 	
+	// Register content pane
+	private JPanel registerContentPane;
+	private JButton btnRegister;
+	private JTextField textRegPassword;
+	private JLabel label;
+	private JTextField textRegUsername;
+	private JLabel label_1;
+	private JLabel lblRegister;
+	
 	// My things
 	static final String ERROR_MSG = "***error";
 	static final String SUCCESS_MSG = "***success";
+	static final String LOGIN_REQUEST = "***login_request";
+	static final String REGISTER_REQUEST = "***register_request";
 	static final String FILE_REQUEST = "***file_request";
 	static final String UPLOAD_REQUEST = "***upload_request";
 	Socket connectionSocket = null;
@@ -63,8 +78,10 @@ public class Client extends JFrame {
 	String currentUsername = "mata998";
 	String[] currentFiles = null;
 	String currentFilesString;
-	String requestedFileText = "";
-	///////
+	String requestedFileText = ""; ///////
+	private JLabel lblHaveAccount;
+	private JButton btnGoToLogin;
+	/////
 	
 	
 
@@ -91,33 +108,44 @@ public class Client extends JFrame {
 	// THIS IS MAIN REALLY
 	public Client() {
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(100, 100, 450, 300);
+		setBounds(430, 200, 450, 300);
+
 		
-		logInContentPane = new JPanel();
-		logInContentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
-		setContentPane(logInContentPane);
-		logInContentPane.setLayout(null);
-		
-		
+		setContentPane(getLogInContentPane());
 //		setContentPane(getAppContentPane());
+//		setContentPane(getRegisterContentPane());
 		
-		try {
-			connectToServer();
+	}
+	
+	// LOG IN CONTENT PANE
+	private JPanel getLogInContentPane() {
+		if (logInContentPane == null) {
+			logInContentPane = new JPanel();
+			logInContentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
+			logInContentPane.setLayout(null);
 			
-			// LOG IN CONTENT PANE
-			logInContentPane.add(getBtnLogIn());
-			logInContentPane.add(getTextUsername());
-			logInContentPane.add(getTextPassword());
-			logInContentPane.add(getLblUsername());
-			logInContentPane.add(getLblPassword());
+			try {
+				connectToServer();
+				
+				logInContentPane.add(getBtnLogIn());
+				logInContentPane.add(getTextUsername());
+				logInContentPane.add(getTextPassword());
+				logInContentPane.add(getLblUsername());
+				logInContentPane.add(getLblPassword());
+				logInContentPane.add(getLblLogIn());
+				logInContentPane.add(getBtnGoToRegister());
+				logInContentPane.add(getLblNoAccount());		
+				
+				
+			} catch (Exception e) {
+				logInContentPane.add(getLblServerDown());
+				
+				System.out.println("SERVER DOWN");
+			}
 			
 			
-			
-		} catch (Exception e) {
-			logInContentPane.add(getLblServerDown());
-			
-			System.out.println("SERVER DOWN");
 		}
+		return logInContentPane;
 	}
 	
 	// CONNECTING TO SERVER
@@ -162,6 +190,9 @@ public class Client extends JFrame {
 							return;
 						}
 						
+						// SEND LOGIN REQUEST
+						toServerStream.println(LOGIN_REQUEST);
+						
 						// SENDING USS;PASS
 						toServerStream.println(userName + ";" + password);
 						
@@ -181,7 +212,7 @@ public class Client extends JFrame {
 								currentFiles = null;
 							}
 							else {
-								currentFilesString = serverMsg;
+								currentFilesString = new String(serverMsg);
 								currentFiles = serverMsg.split(";");
 							}
 
@@ -213,10 +244,30 @@ public class Client extends JFrame {
 					
 				}
 			});
-			btnLogIn.setBounds(168, 187, 89, 23);
+			btnLogIn.setBounds(174, 211, 89, 23);
 		}
 		return btnLogIn;
 	}
+	
+	// BTN GO TO REGISTER
+		private JButton getBtnGoToRegister() {
+			if (btnGoToRegister == null) {
+				btnGoToRegister = new JButton("Register");
+				btnGoToRegister.addActionListener(new ActionListener() {
+					public void actionPerformed(ActionEvent arg0) {
+						
+						// CHANGE CONTENT PANE
+						Client.this.setContentPane(getRegisterContentPane());
+						Client.this.validate();
+						
+					}
+				});
+				btnGoToRegister.setBounds(345, 239, 89, 23);
+			}
+			return btnGoToRegister;
+		}
+	//////////////////////////
+	
 	
 	// APP CONTENT PANE
 	private JPanel getAppContentPane() {
@@ -334,6 +385,17 @@ public class Client extends JFrame {
 						return;
 					}
 					
+					
+					if (currentFiles != null && currentFiles.length == 5) {
+						JOptionPane.showMessageDialog(
+								Client.this,
+								"You have 5 files, you can't upload more", 
+								"Error",
+								JOptionPane.ERROR_MESSAGE);
+						return;
+					}
+					
+					
 					String fileName = filePath.substring(filePath.lastIndexOf("/")+1);
 					
 					
@@ -351,8 +413,6 @@ public class Client extends JFrame {
 					toServerStream.println(SUCCESS_MSG);
 					
 					// UPDATE currentUser files
-					// FIX THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-					
 					if (currentFiles != null) {
 						String[] newCurrentFiles = Arrays.copyOf(currentFiles, currentFiles.length+1);
 						newCurrentFiles[newCurrentFiles.length-1] = fileName;
@@ -385,12 +445,127 @@ public class Client extends JFrame {
 		}
 		return btnUpload;
 	}
+	////////////////////////////////////
 	
 	
+	// REGISTER CONTENT PANE
+	private JPanel getRegisterContentPane() {
+		if (registerContentPane == null) {
+			registerContentPane = new JPanel();
+			registerContentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
+			registerContentPane.setLayout(null);
+			registerContentPane.add(getBtnRegister());
+			registerContentPane.add(getTextRegPassword());
+			registerContentPane.add(getLabel());
+			registerContentPane.add(getTextRegUsername());
+			registerContentPane.add(getLabel_1());
+			registerContentPane.add(getLblRegister());
+			registerContentPane.add(getLblHaveAccount());
+			registerContentPane.add(getBtnGoToLogin());
+			
+			
+		}
+		return registerContentPane;
+	}
+	
+	// REGISTER BUTTON
+	private JButton getBtnRegister() {
+		if (btnRegister == null) {
+			btnRegister = new JButton("Register!");
+			btnRegister.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent e) {
+					try {
+						
+						String userName = textRegUsername.getText();
+						String password = textRegPassword.getText();
+						
+						if (userName.equals("") ||
+							password.equals(""))
+						{
+							JOptionPane.showMessageDialog(
+									Client.this,
+									"Please eneter both fields", 
+									"Error",
+									JOptionPane.ERROR_MESSAGE);
+							return;
+						}
+						
+						// SEND REGISTER REQUEST
+						toServerStream.println(REGISTER_REQUEST);
+						
+						// SENDING USS;PASS
+						toServerStream.println(userName + ";" + password);
+						
+						// GETTING username availability
+						serverMsg = fromServerStream.readLine();
+						
+						
+						if (serverMsg.equals(SUCCESS_MSG)) {
+							System.out.println("SUCCESS");
+							
+							currentUsername = new String(userName);
+							currentFilesString = "";
+							currentFiles = null;
+							
+							// CHANGE CONTENT PANE
+							Client.this.setContentPane(getAppContentPane());
+							Client.this.validate();
+							
+						}
+						else {
+							System.out.println("USERNAME NOT AVAILABLE");
+							
+							JOptionPane.showMessageDialog(
+									Client.this,
+									"Username is not available", 
+									"Error",
+									JOptionPane.ERROR_MESSAGE);
+						}
+						
+						
+					}
+					catch (Exception ex) {
+						JOptionPane.showMessageDialog(
+								Client.this,
+								"Server stopped working", 
+								"Error",
+								JOptionPane.ERROR_MESSAGE);
+						
+						dispose();
+					}
+					
+				}
+			});
+			btnRegister.setBounds(174, 211, 89, 23);
+		}
+		return btnRegister;
+	}
+	
+	// BTN GO TO LOGIN
+	private JButton getBtnGoToLogin() {
+		if (btnGoToLogin == null) {
+			btnGoToLogin = new JButton("Log In");
+			btnGoToLogin.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent e) {
+					
+					// CHANGE CONTENT PANE
+					Client.this.setContentPane(getLogInContentPane());
+					Client.this.validate();
+					
+				}
+			});
+			btnGoToLogin.setBounds(345, 239, 89, 23);
+		}
+		return btnGoToLogin;
+	}
+	///////////////////////////////////
+	
+	
+	// LogIN items
 	private JTextField getTextUsername() {
 		if (textUsername == null) {
 			textUsername = new JTextField();
-			textUsername.setBounds(168, 54, 86, 20);
+			textUsername.setBounds(174, 94, 86, 20);
 			textUsername.setColumns(10);
 		}
 		return textUsername;
@@ -399,21 +574,23 @@ public class Client extends JFrame {
 		if (textPassword == null) {
 			textPassword = new JTextField();
 			textPassword.setColumns(10);
-			textPassword.setBounds(168, 125, 86, 20);
+			textPassword.setBounds(174, 165, 86, 20);
 		}
 		return textPassword;
 	}
 	private JLabel getLblUsername() {
 		if (lblUsername == null) {
 			lblUsername = new JLabel("Username");
-			lblUsername.setBounds(168, 29, 103, 14);
+			lblUsername.setHorizontalAlignment(SwingConstants.CENTER);
+			lblUsername.setBounds(10, 69, 414, 14);
 		}
 		return lblUsername;
 	}
 	private JLabel getLblPassword() {
 		if (lblPassword == null) {
 			lblPassword = new JLabel("Password");
-			lblPassword.setBounds(168, 100, 103, 14);
+			lblPassword.setHorizontalAlignment(SwingConstants.CENTER);
+			lblPassword.setBounds(10, 140, 414, 14);
 		}
 		return lblPassword;
 	}
@@ -425,9 +602,25 @@ public class Client extends JFrame {
 		}
 		return lblServerDown;
 	}
+	private JLabel getLblLogIn() {
+		if (lblLogIn == null) {
+			lblLogIn = new JLabel("LOG IN");
+			lblLogIn.setFont(new Font("Tahoma", Font.BOLD, 20));
+			lblLogIn.setHorizontalAlignment(SwingConstants.CENTER);
+			lblLogIn.setBounds(10, 11, 414, 33);
+		}
+		return lblLogIn;
+	}
+	private JLabel getLblNoAccount() {
+		if (lblNoAccount == null) {
+			lblNoAccount = new JLabel("No account?");
+			lblNoAccount.setHorizontalAlignment(SwingConstants.CENTER);
+			lblNoAccount.setBounds(345, 220, 79, 14);
+		}
+		return lblNoAccount;
+	}
 	
-	
-	
+	// App items
 	private JLabel getLblPls() {
 		if (lblPls == null) {
 			lblPls = new JLabel("Welcome "+ currentUsername);
@@ -488,6 +681,58 @@ public class Client extends JFrame {
 			textFilePath.setColumns(10);
 		}
 		return textFilePath;
+	}
+
+	// Register items
+	private JTextField getTextRegPassword() {
+		if (textRegPassword == null) {
+			textRegPassword = new JTextField();
+			textRegPassword.setColumns(10);
+			textRegPassword.setBounds(174, 165, 86, 20);
+		}
+		return textRegPassword;
+	}
+	private JLabel getLabel() {
+		if (label == null) {
+			label = new JLabel("Password");
+			label.setHorizontalAlignment(SwingConstants.CENTER);
+			label.setBounds(10, 140, 414, 14);
+		}
+		return label;
+	}
+	private JTextField getTextRegUsername() {
+		if (textRegUsername == null) {
+			textRegUsername = new JTextField();
+			textRegUsername.setColumns(10);
+			textRegUsername.setBounds(174, 94, 86, 20);
+		}
+		return textRegUsername;
+	}
+	private JLabel getLabel_1() {
+		if (label_1 == null) {
+			label_1 = new JLabel("Username");
+			label_1.setHorizontalAlignment(SwingConstants.CENTER);
+			label_1.setBounds(10, 69, 414, 14);
+		}
+		return label_1;
+	}
+	private JLabel getLblRegister() {
+		if (lblRegister == null) {
+			lblRegister = new JLabel("REGISTER");
+			lblRegister.setHorizontalAlignment(SwingConstants.CENTER);
+			lblRegister.setFont(new Font("Tahoma", Font.BOLD, 20));
+			lblRegister.setBounds(10, 11, 414, 33);
+		}
+		return lblRegister;
+	}
+	private JLabel getLblHaveAccount() {
+		if (lblHaveAccount == null) {
+			lblHaveAccount = new JLabel("Have account?");
+			lblHaveAccount.setFont(new Font("Tahoma", Font.PLAIN, 11));
+			lblHaveAccount.setHorizontalAlignment(SwingConstants.CENTER);
+			lblHaveAccount.setBounds(345, 220, 79, 14);
+		}
+		return lblHaveAccount;
 	}
 
 }

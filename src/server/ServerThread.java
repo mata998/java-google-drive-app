@@ -1,13 +1,18 @@
 package server;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.Socket;
 
+import server.userClasses.User;
+
 public class ServerThread extends Thread{
 	static final String ERROR_MSG = "***error";
 	static final String SUCCESS_MSG = "***success";
+	static final String LOGIN_REQUEST = "***login_request";
+	static final String REGISTER_REQUEST = "***register_request";
 	static final String FILE_REQUEST = "***file_request";
 	static final String UPLOAD_REQUEST = "***upload_request";
 	Socket connectionSocket = null;
@@ -43,54 +48,102 @@ public class ServerThread extends Thread{
 					new PrintStream(
 						connectionSocket.getOutputStream());
 		
-			// LOGIN loop
-			while (true) {
-				System.out.println("waiting for uss and pass...");
-				
-				// Getting ussername;password   string
-				clientMsg = fromClientStream.readLine();
-				
-				String[] usspass = clientMsg.split(";");
-				String username = usspass[0];
-				String password = usspass[1];
-				
-				
-				
-				// AUTHENTICATION
-				if (Server.authenticate(username, password)) {
-					
-					// inform client that it is succesfull
-					toClientStream.println(SUCCESS_MSG);
-					
-					// get that User object
-					currentUser = Server.getUser(username);
-					
-					// send client file list
-					if (currentUser.getFiles().isEmpty() == false) {
-						toClientStream.println(currentUser.getFilesString());
-					}
-					else {
-						toClientStream.println(ERROR_MSG);
-					}
-					
-					// END LOGIN loop
-					break;
-						
-				}
-				else {
-					toClientStream.println(ERROR_MSG);
-				}
-				
-			} // end of LOGIN loop
 			
 			
+			// APP ACTIONS LOOP
 			while (true) {
+				
 				// wait for next action
 				System.out.println("\nWaiting for actions");
 				clientMsg = fromClientStream.readLine();
 				
 				
+				// LOGIN action /////////////////////////
+				if (clientMsg.equals(LOGIN_REQUEST)) {
+					System.out.println("LOGIN REQUEST");
+					
+					// Getting ussername;password   string
+					clientMsg = fromClientStream.readLine();
+					
+					String[] usspass = clientMsg.split(";");
+					String username = usspass[0];
+					String password = usspass[1];
+					
+					
+					// AUTHENTICATION
+					if (Server.authenticate(username, password)) {
+						
+						// inform client that it is succesfull
+						toClientStream.println(SUCCESS_MSG);
+						
+						// get that User object
+						currentUser = Server.getUser(username);
+						
+						// send client file list
+						if (currentUser.getFiles().isEmpty() == false) {
+							toClientStream.println(currentUser.getFilesString());
+						}
+						else {
+							toClientStream.println(ERROR_MSG);
+						}
+
+							
+					}
+					else {
+						toClientStream.println(ERROR_MSG);
+					}
+					
+				}
+				
+				
+				// REGISTER action /////////////////////////////////
+				if (clientMsg.equals(REGISTER_REQUEST)) {
+					System.out.println("REGISTER REQUEST");
+					 
+					// Getting ussername;password   string
+					clientMsg = fromClientStream.readLine();
+					
+					String[] usspass = clientMsg.split(";");
+					String username = usspass[0];
+					String password = usspass[1];
+					
+					
+					if (Server.userExists(username) == false) {
+										
+						// Create new user
+						currentUser = new User();
+						currentUser.setUsername(username);
+						currentUser.setPassword(password);
+						
+						// Add it to list of users
+						Server.listOfUsers.add(currentUser);
+						
+						// Update json database
+						Server.updateJsonUsers();
+						
+						// Create database folder
+						File newfolder = new File("src/server/database/" + currentUser.getUsername());
+						newfolder.mkdir();
+						
+
+						// INFORM CLIENT about successfull registration
+						toClientStream.println(SUCCESS_MSG);
+						
+					}
+					else {
+						
+						toClientStream.println(ERROR_MSG);
+					
+					}
+					
+					
+				}
+				
+				
+				// FILE REQUEST action /////////////////////////
 				if (clientMsg.equals(FILE_REQUEST)) {
+					System.out.println("FILE REQUEST");
+					
 					String userDirectory = "src/server/database/" + currentUser.getUsername() + "/";
 					
 					// getting file request
@@ -105,13 +158,14 @@ public class ServerThread extends Thread{
 				}
 				
 				
+				// UPLOAT REQUEST action /////////////////////////
 				if (clientMsg.equals(UPLOAD_REQUEST)) {
-					System.out.println("he wants to push it");
+					System.out.println("UPLOAD REQUEST");
 					
 					// GET NEW FILE NAME
 					clientMsg = fromClientStream.readLine();
 					newFileName = new String(clientMsg);
-					System.out.println("he wants to push: " + newFileName);
+					System.out.println("client wants to upload: " + newFileName);
 					
 					// GET NEW FILE TEXT
 					newFileText = "";
@@ -127,8 +181,7 @@ public class ServerThread extends Thread{
 						newFileText = newFileText + oneLine + "\n";
 					}
 					
-					System.out.println("FILE RECIVED: ");
-					System.out.println(newFileText);
+					System.out.println("FILE RECIVED");
 					
 					
 					// MAKE THAT FILE
@@ -141,14 +194,13 @@ public class ServerThread extends Thread{
 					currentUser.addFile(newFileName);
 					
 					// UPDATE JSON DATABASE
-					Server.updateUsers();
-					
+					Server.updateJsonUsers();
+					System.out.println("DATABASE UPDATED");
 					
 				}
 				
 				
-				
-			}
+			} // end of App actions loop
 			
 			
 		} catch (Exception e) {

@@ -6,6 +6,8 @@ import java.net.Socket;
 import java.util.LinkedList;
 import java.util.List;
 
+import server.userClasses.User;
+
 
 public class Server {
 
@@ -15,7 +17,7 @@ public class Server {
 	public static void main(String[] args) {
 		System.out.println("SERVER\n");
 		
-		loadUsers();
+		loadJsonUsers();
 		
 		try {
 			ServerSocket serverSocket = new ServerSocket(3000);
@@ -43,7 +45,7 @@ public class Server {
 	}
 	
 	
-	public static void loadUsers() {
+	public static void loadJsonUsers() {
 		
 		String json = FileConvertor.readFile("src/server/users.json");
 		
@@ -51,7 +53,7 @@ public class Server {
 		
 	}
 	
-	public static void updateUsers() {
+	public static void updateJsonUsers() {
 		
 		String json = FileConvertor.usersToJson(listOfUsers);
 		

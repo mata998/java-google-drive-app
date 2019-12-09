@@ -5,13 +5,16 @@
 		"files": [
 			"posalji me.txt",
 			"posalji.txt",
-			"jos.txt"
+			"jos.txt",
+			"nesto drugo.txt",
+			"ovo.txt"
 		]
 	},
 	{
 		"username": "pera998",
 		"password": "lozinka456",
 		"files": [
+			"svasta.txt"
 		]
 	},
 	{
@@ -27,13 +30,22 @@
 		"password": "a",
 		"files": [
 			"nesto.txt",
-			"nesto drugo.txt"
+			"nesto drugo.txt",
+			"posalji.txt"
 		]
 	},
 	{
 		"username": "b",
 		"password": "b",
 		"files": [
+		]
+	},
+	{
+		"username": "c",
+		"password": "c",
+		"files": [
+			"posalji.txt",
+			"jos.txt"
 		]
 	}
 ]

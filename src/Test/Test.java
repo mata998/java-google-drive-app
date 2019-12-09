@@ -4,7 +4,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import server.FileConvertor;
-import server.User;
+import server.userClasses.User;
 
 public class Test {
 
