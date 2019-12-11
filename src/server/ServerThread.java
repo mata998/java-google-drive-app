@@ -205,6 +205,8 @@ public class ServerThread extends Thread{
 			
 		} catch (Exception e) {
 			System.out.println("Client dissconected");
+			
+			Server.listOfThreads.remove(this);
 		}
 	}
 

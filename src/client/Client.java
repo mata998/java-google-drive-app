@@ -81,6 +81,19 @@ public class Client extends JFrame {
 	String requestedFileText = ""; ///////
 	private JLabel lblHaveAccount;
 	private JButton btnGoToLogin;
+	private JButton btnLogOut;
+	private JTextField textLink;
+	private JButton btnLink;
+	private JLabel lblLinkForSharing;
+	private JButton btnDownload;
+	private JLabel lblWhoSharedWith;
+	private JComboBox comboBoxWhoShared;
+	private JLabel lblShareWith;
+	private JComboBox comboBoxSharedTo;
+	private JComboBox comboBoxTheirFiles;
+	private JLabel lblTheirFiles;
+	private JLabel lblYouSharedTo;
+	private JTextField textShareTo;
 	/////
 	
 	
@@ -108,7 +121,7 @@ public class Client extends JFrame {
 	// THIS IS MAIN REALLY
 	public Client() {
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(430, 200, 450, 300);
+		setBounds(430, 200, 586, 418);
 
 		
 		setContentPane(getLogInContentPane());
@@ -244,28 +257,28 @@ public class Client extends JFrame {
 					
 				}
 			});
-			btnLogIn.setBounds(174, 211, 89, 23);
+			btnLogIn.setBounds(243, 211, 89, 23);
 		}
 		return btnLogIn;
 	}
 	
 	// BTN GO TO REGISTER
-		private JButton getBtnGoToRegister() {
-			if (btnGoToRegister == null) {
-				btnGoToRegister = new JButton("Register");
-				btnGoToRegister.addActionListener(new ActionListener() {
-					public void actionPerformed(ActionEvent arg0) {
-						
-						// CHANGE CONTENT PANE
-						Client.this.setContentPane(getRegisterContentPane());
-						Client.this.validate();
-						
-					}
-				});
-				btnGoToRegister.setBounds(345, 239, 89, 23);
-			}
-			return btnGoToRegister;
+	private JButton getBtnGoToRegister() {
+		if (btnGoToRegister == null) {
+			btnGoToRegister = new JButton("Register");
+			btnGoToRegister.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent arg0) {
+					
+					// CHANGE CONTENT PANE
+					Client.this.setContentPane(getRegisterContentPane());
+					Client.this.validate();
+					
+				}
+			});
+			btnGoToRegister.setBounds(471, 346, 89, 23);
 		}
+		return btnGoToRegister;
+	}
 	//////////////////////////
 	
 	
@@ -283,12 +296,29 @@ public class Client extends JFrame {
 			appContentPane.add(getLblEnterFilePath());
 			appContentPane.add(getTextFilePath());
 			appContentPane.add(getBtnUpload());
+			appContentPane.add(getBtnLogOut());
+			appContentPane.add(getTextLink());
+			appContentPane.add(getBtnLink());
+			appContentPane.add(getLblLinkForSharing());
+			appContentPane.add(getBtnDownload());
+			
+			// new stuff
+			appContentPane.add(getLblWhoSharedWith());
+			appContentPane.add(getComboBoxWhoShared());
+			appContentPane.add(getLblShareWith());
+			appContentPane.add(getComboBoxSharedTo());
+			appContentPane.add(getComboBoxTheirFiles());
+			appContentPane.add(getLblTheirFiles());
+			appContentPane.add(getLblYouSharedTo());
+			appContentPane.add(getTextShareTo());
+			
+//			appContentPane.add(getComboBoxYourFilesTEST());
 			
 			if (currentFiles != null) {
-				appContentPane.add(getComboBox(currentFiles));	
+				appContentPane.add(getComboBoxYourFiles(currentFiles));	
 			}
 			else {
-				appContentPane.add(getComboBox(new String[] {"No files"}));
+				appContentPane.add(getComboBoxYourFiles(new String[] {"No files"}));
 			}
 			
 		}
@@ -296,12 +326,12 @@ public class Client extends JFrame {
 	}
 
 	// COMBOBOX ACTION
-	private JComboBox getComboBox(String[] filesToShow) {
+	private JComboBox getComboBoxYourFiles(String[] filesToShow) {
 			if (comboBox == null) {
 				comboBox = new JComboBox();
 				comboBox.setModel(new DefaultComboBoxModel(filesToShow));
 				comboBox.setToolTipText("");
-				comboBox.setBounds(10, 77, 96, 20);
+				comboBox.setBounds(10, 85, 96, 20);
 				
 				
 				comboBox.addActionListener(new ActionListener() {
@@ -441,7 +471,7 @@ public class Client extends JFrame {
 					
 				}
 			});
-			btnUpload.setBounds(10, 218, 89, 23);
+			btnUpload.setBounds(10, 346, 89, 23);
 		}
 		return btnUpload;
 	}
@@ -507,6 +537,12 @@ public class Client extends JFrame {
 							currentFilesString = "";
 							currentFiles = null;
 							
+							JOptionPane.showMessageDialog(
+									Client.this,
+									"Successfully registered!", 
+									"Success",
+									JOptionPane.INFORMATION_MESSAGE);
+							
 							// CHANGE CONTENT PANE
 							Client.this.setContentPane(getAppContentPane());
 							Client.this.validate();
@@ -536,7 +572,7 @@ public class Client extends JFrame {
 					
 				}
 			});
-			btnRegister.setBounds(174, 211, 89, 23);
+			btnRegister.setBounds(243, 211, 89, 23);
 		}
 		return btnRegister;
 	}
@@ -554,7 +590,7 @@ public class Client extends JFrame {
 					
 				}
 			});
-			btnGoToLogin.setBounds(345, 239, 89, 23);
+			btnGoToLogin.setBounds(471, 346, 89, 23);
 		}
 		return btnGoToLogin;
 	}
@@ -565,7 +601,7 @@ public class Client extends JFrame {
 	private JTextField getTextUsername() {
 		if (textUsername == null) {
 			textUsername = new JTextField();
-			textUsername.setBounds(174, 94, 86, 20);
+			textUsername.setBounds(243, 94, 86, 20);
 			textUsername.setColumns(10);
 		}
 		return textUsername;
@@ -574,7 +610,7 @@ public class Client extends JFrame {
 		if (textPassword == null) {
 			textPassword = new JTextField();
 			textPassword.setColumns(10);
-			textPassword.setBounds(174, 165, 86, 20);
+			textPassword.setBounds(243, 165, 86, 20);
 		}
 		return textPassword;
 	}
@@ -582,7 +618,7 @@ public class Client extends JFrame {
 		if (lblUsername == null) {
 			lblUsername = new JLabel("Username");
 			lblUsername.setHorizontalAlignment(SwingConstants.CENTER);
-			lblUsername.setBounds(10, 69, 414, 14);
+			lblUsername.setBounds(10, 69, 550, 14);
 		}
 		return lblUsername;
 	}
@@ -590,15 +626,16 @@ public class Client extends JFrame {
 		if (lblPassword == null) {
 			lblPassword = new JLabel("Password");
 			lblPassword.setHorizontalAlignment(SwingConstants.CENTER);
-			lblPassword.setBounds(10, 140, 414, 14);
+			lblPassword.setBounds(10, 140, 550, 14);
 		}
 		return lblPassword;
 	}
 	private JLabel getLblServerDown() {
 		if (lblServerDown == null) {
 			lblServerDown = new JLabel("Server is not currently working");
+			lblServerDown.setFont(new Font("Tahoma", Font.PLAIN, 25));
 			lblServerDown.setHorizontalAlignment(SwingConstants.CENTER);
-			lblServerDown.setBounds(10, 111, 414, 14);
+			lblServerDown.setBounds(10, 146, 550, 42);
 		}
 		return lblServerDown;
 	}
@@ -607,7 +644,7 @@ public class Client extends JFrame {
 			lblLogIn = new JLabel("LOG IN");
 			lblLogIn.setFont(new Font("Tahoma", Font.BOLD, 20));
 			lblLogIn.setHorizontalAlignment(SwingConstants.CENTER);
-			lblLogIn.setBounds(10, 11, 414, 33);
+			lblLogIn.setBounds(10, 11, 550, 33);
 		}
 		return lblLogIn;
 	}
@@ -615,80 +652,181 @@ public class Client extends JFrame {
 		if (lblNoAccount == null) {
 			lblNoAccount = new JLabel("No account?");
 			lblNoAccount.setHorizontalAlignment(SwingConstants.CENTER);
-			lblNoAccount.setBounds(345, 220, 79, 14);
+			lblNoAccount.setBounds(471, 321, 89, 14);
 		}
 		return lblNoAccount;
 	}
 	
 	// App items
+	private JComboBox getComboBoxYourFilesTEST() {
+		if (comboBox == null) {
+			comboBox = new JComboBox();
+			comboBox.setModel(new DefaultComboBoxModel(new String[] {"test1", "test2", "test3"}));
+			comboBox.setToolTipText("");
+			comboBox.setBounds(10, 85, 96, 20);
+		}
+		return comboBox;
+	}
 	private JLabel getLblPls() {
 		if (lblPls == null) {
 			lblPls = new JLabel("Welcome "+ currentUsername);
-			lblPls.setBounds(10, 22, 119, 14);
+			lblPls.setFont(new Font("Tahoma", Font.PLAIN, 16));
+			lblPls.setBounds(10, 11, 202, 14);
 		}
 		return lblPls;
 	}
 	private JLabel getLblNewLabel() {
 		if (lblNewLabel == null) {
 			lblNewLabel = new JLabel("Your files");
-			lblNewLabel.setBounds(10, 55, 69, 14);
+			lblNewLabel.setBounds(10, 62, 69, 14);
 		}
 		return lblNewLabel;
-	}
-	private JComboBox getComboBoxTestt() {
-		if (comboBox == null) {
-			comboBox = new JComboBox();
-			comboBox.setEditable(true);
-			comboBox.setModel(new DefaultComboBoxModel(new String[] {"test1", "test2", "test3"}));
-			comboBox.setToolTipText("");
-			comboBox.setBounds(10, 77, 96, 20);
-		}
-		return comboBox;
 	}
 	private JTextArea getTextArea() {
 		if (textArea == null) {
 			textArea = new JTextArea();
 			textArea.setEditable(false);
-			textArea.setBounds(191, 47, 233, 204);
+			textArea.setBounds(327, 87, 233, 248);
 		}
 		return textArea;
 	}
 	private JLabel getLblSelectedFile() {
 		if (lblSelectedFile == null) {
 			lblSelectedFile = new JLabel("Selected file:");
-			lblSelectedFile.setBounds(191, 22, 233, 14);
+			lblSelectedFile.setBounds(327, 62, 233, 14);
 		}
 		return lblSelectedFile;
 	}
 	private JLabel getLblUploadANew() {
 		if (lblUploadANew == null) {
 			lblUploadANew = new JLabel("Upload a new file");
-			lblUploadANew.setBounds(10, 137, 134, 14);
+			lblUploadANew.setBounds(10, 265, 134, 14);
 		}
 		return lblUploadANew;
 	}
 	private JLabel getLblEnterFilePath() {
 		if (lblEnterFilePath == null) {
 			lblEnterFilePath = new JLabel("Enter file path:");
-			lblEnterFilePath.setBounds(10, 162, 134, 14);
+			lblEnterFilePath.setBounds(10, 290, 134, 14);
 		}
 		return lblEnterFilePath;
 	}
 	private JTextField getTextFilePath() {
 		if (textFilePath == null) {
 			textFilePath = new JTextField();
-			textFilePath.setBounds(10, 187, 134, 20);
+			textFilePath.setBounds(10, 315, 134, 20);
 			textFilePath.setColumns(10);
 		}
 		return textFilePath;
 	}
+	private JButton getBtnLogOut() {
+		if (btnLogOut == null) {
+			btnLogOut = new JButton("Log out");
+			btnLogOut.setBounds(471, 346, 89, 23);
+		}
+		return btnLogOut;
+	}
+	private JTextField getTextLink() {
+		if (textLink == null) {
+			textLink = new JTextField();
+			textLink.setEditable(false);
+			textLink.setText("asdasdasd");
+			textLink.setBounds(327, 31, 134, 20);
+			textLink.setColumns(10);
+		}
+		return textLink;
+	}
+	private JButton getBtnLink() {
+		if (btnLink == null) {
+			btnLink = new JButton("Link ON");
+			btnLink.setBounds(471, 28, 89, 23);
+		}
+		return btnLink;
+	}
+	private JLabel getLblLinkForSharing() {
+		if (lblLinkForSharing == null) {
+			lblLinkForSharing = new JLabel("Link for sharing");
+			lblLinkForSharing.setBounds(327, 13, 233, 14);
+		}
+		return lblLinkForSharing;
+	}
+		// new stuff
+	private JButton getBtnDownload() {
+		if (btnDownload == null) {
+			btnDownload = new JButton("Download");
+			btnDownload.setBounds(327, 346, 100, 23);
+		}
+		return btnDownload;
+	}
+	private JLabel getLblWhoSharedWith() {
+		if (lblWhoSharedWith == null) {
+			lblWhoSharedWith = new JLabel("Who shared with you");
+			lblWhoSharedWith.setBounds(10, 127, 121, 14);
+		}
+		return lblWhoSharedWith;
+	}
+	private JComboBox getComboBoxWhoShared() {
+		if (comboBoxWhoShared == null) {
+			comboBoxWhoShared = new JComboBox();
+			comboBoxWhoShared.setToolTipText("");
+			comboBoxWhoShared.setBounds(10, 150, 96, 20);
+		}
+		return comboBoxWhoShared;
+	}
+	private JLabel getLblShareWith() {
+		if (lblShareWith == null) {
+			lblShareWith = new JLabel("Share to");
+			lblShareWith.setBounds(10, 198, 69, 14);
+		}
+		return lblShareWith;
+	}
+	private JComboBox getComboBoxSharedTo() {
+		if (comboBoxSharedTo == null) {
+			comboBoxSharedTo = new JComboBox();
+			comboBoxSharedTo.setToolTipText("");
+			comboBoxSharedTo.setBounds(144, 223, 96, 20);
+		}
+		return comboBoxSharedTo;
+	}
+	private JComboBox getComboBoxTheirFiles() {
+		if (comboBoxTheirFiles == null) {
+			comboBoxTheirFiles = new JComboBox();
+			comboBoxTheirFiles.setToolTipText("");
+			comboBoxTheirFiles.setBounds(144, 150, 96, 20);
+		}
+		return comboBoxTheirFiles;
+	}
+	private JLabel getLblTheirFiles() {
+		if (lblTheirFiles == null) {
+			lblTheirFiles = new JLabel("Their files");
+			lblTheirFiles.setBounds(144, 127, 121, 14);
+		}
+		return lblTheirFiles;
+	}
+	private JLabel getLblYouSharedTo() {
+		if (lblYouSharedTo == null) {
+			lblYouSharedTo = new JLabel("You shared to");
+			lblYouSharedTo.setBounds(144, 198, 96, 14);
+		}
+		return lblYouSharedTo;
+	}
+	private JTextField getTextShareTo() {
+		if (textShareTo == null) {
+			textShareTo = new JTextField();
+			textShareTo.setColumns(10);
+			textShareTo.setBounds(10, 223, 121, 20);
+		}
+		return textShareTo;
+	}
 
+	
+	
 	// Register items
 	private JTextField getTextRegPassword() {
 		if (textRegPassword == null) {
 			textRegPassword = new JTextField();
 			textRegPassword.setColumns(10);
-			textRegPassword.setBounds(174, 165, 86, 20);
+			textRegPassword.setBounds(243, 165, 86, 20);
 		}
 		return textRegPassword;
 	}
@@ -696,7 +834,7 @@ public class Client extends JFrame {
 		if (label == null) {
 			label = new JLabel("Password");
 			label.setHorizontalAlignment(SwingConstants.CENTER);
-			label.setBounds(10, 140, 414, 14);
+			label.setBounds(10, 140, 550, 14);
 		}
 		return label;
 	}
@@ -704,7 +842,7 @@ public class Client extends JFrame {
 		if (textRegUsername == null) {
 			textRegUsername = new JTextField();
 			textRegUsername.setColumns(10);
-			textRegUsername.setBounds(174, 94, 86, 20);
+			textRegUsername.setBounds(243, 94, 86, 20);
 		}
 		return textRegUsername;
 	}
@@ -712,7 +850,7 @@ public class Client extends JFrame {
 		if (label_1 == null) {
 			label_1 = new JLabel("Username");
 			label_1.setHorizontalAlignment(SwingConstants.CENTER);
-			label_1.setBounds(10, 69, 414, 14);
+			label_1.setBounds(10, 69, 550, 14);
 		}
 		return label_1;
 	}
@@ -721,7 +859,7 @@ public class Client extends JFrame {
 			lblRegister = new JLabel("REGISTER");
 			lblRegister.setHorizontalAlignment(SwingConstants.CENTER);
 			lblRegister.setFont(new Font("Tahoma", Font.BOLD, 20));
-			lblRegister.setBounds(10, 11, 414, 33);
+			lblRegister.setBounds(10, 11, 550, 33);
 		}
 		return lblRegister;
 	}
@@ -730,9 +868,11 @@ public class Client extends JFrame {
 			lblHaveAccount = new JLabel("Have account?");
 			lblHaveAccount.setFont(new Font("Tahoma", Font.PLAIN, 11));
 			lblHaveAccount.setHorizontalAlignment(SwingConstants.CENTER);
-			lblHaveAccount.setBounds(345, 220, 79, 14);
+			lblHaveAccount.setBounds(471, 321, 89, 14);
 		}
 		return lblHaveAccount;
 	}
+	
+	
 
 }
