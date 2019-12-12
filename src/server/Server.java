@@ -112,7 +112,18 @@ public class Server {
 		return null;
 	}
 	
-	
+	public static User getUserByShareLink(String shareLink) {
+		
+		for (User user : listOfUsers) {
+			
+			if (user.getLink().equals(shareLink) && user.isLinkOn()) {
+				return user;
+			}
+			
+		}
+		
+		return null;
+	}
 	
 	
 }

@@ -12,16 +12,16 @@ public class Test {
 		
 		List<User> lista = new LinkedList<>();
 		
+		// read
 		String json = FileConvertor.readFile("src/server/users.json");
-//		System.out.println(json);
 		
 		lista = FileConvertor.jsonToUsers(json);
 		
 		printUsers(lista);
 		
 		
-//		lista.get(0).setFilesFromString("nesto.txt;nesto drugo.txt;trece nesto.txt;");
-//		
+		
+		//// write
 //		json = FileConvertor.usersToJson(lista);
 //		
 //		FileConvertor.textToFile(json, "src/server/users.json");

@@ -3,6 +3,7 @@ package server;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
+import java.io.ObjectOutputStream;
 import java.io.PrintStream;
 import java.net.Socket;
 
@@ -15,15 +16,16 @@ public class ServerThread extends Thread{
 	static final String REGISTER_REQUEST = "***register_request";
 	static final String FILE_REQUEST = "***file_request";
 	static final String UPLOAD_REQUEST = "***upload_request";
+	static final String LINKONCHANGE_REQUEST = "***linkchange_request";
+	static final String GETUSER_BY_SHARELINK = "***getuserbysharelink";
+	static final String LOGOUT_REQUEST = "***logout_request";
 	Socket connectionSocket = null;
 	BufferedReader fromClientStream = null;
 	PrintStream toClientStream = null;
+	ObjectOutputStream objectToClientStream = null;
 	String clientMsg;
 	User currentUser = null;
-	String requestedFile = null;
-	String requestedFileText = null;
-	String newFileName = null;
-	String newFileText = null;
+
 	
 
 	
@@ -47,7 +49,8 @@ public class ServerThread extends Thread{
 			toClientStream = 
 					new PrintStream(
 						connectionSocket.getOutputStream());
-		
+			
+			objectToClientStream = new ObjectOutputStream(connectionSocket.getOutputStream());
 			
 			
 			// APP ACTIONS LOOP
@@ -79,15 +82,9 @@ public class ServerThread extends Thread{
 						// get that User object
 						currentUser = Server.getUser(username);
 						
-						// send client file list
-						if (currentUser.getFiles().isEmpty() == false) {
-							toClientStream.println(currentUser.getFilesString());
-						}
-						else {
-							toClientStream.println(ERROR_MSG);
-						}
-
-							
+						// send User object to client
+						objectToClientStream.writeObject(currentUser);
+						
 					}
 					else {
 						toClientStream.println(ERROR_MSG);
@@ -114,6 +111,7 @@ public class ServerThread extends Thread{
 						currentUser = new User();
 						currentUser.setUsername(username);
 						currentUser.setPassword(password);
+						currentUser.setLink("superdrive.com/visit/" + username);
 						
 						// Add it to list of users
 						Server.listOfUsers.add(currentUser);
@@ -128,6 +126,9 @@ public class ServerThread extends Thread{
 
 						// INFORM CLIENT about successfull registration
 						toClientStream.println(SUCCESS_MSG);
+						
+						// Send User object to client
+						objectToClientStream.writeObject(currentUser);
 						
 					}
 					else {
@@ -148,10 +149,10 @@ public class ServerThread extends Thread{
 					
 					// getting file request
 					clientMsg = fromClientStream.readLine();
-					requestedFile = new String(clientMsg);
+					String requestedFile = new String(clientMsg);
 					System.out.println("CLIENT REQUESTED: " + requestedFile);
 					
-					requestedFileText = FileConvertor.readFile(userDirectory + requestedFile);
+					String requestedFileText = FileConvertor.readFile(userDirectory + requestedFile);
 					
 					toClientStream.println(requestedFileText);
 					toClientStream.println(SUCCESS_MSG);
@@ -164,11 +165,11 @@ public class ServerThread extends Thread{
 					
 					// GET NEW FILE NAME
 					clientMsg = fromClientStream.readLine();
-					newFileName = new String(clientMsg);
+					String newFileName = new String(clientMsg);
 					System.out.println("client wants to upload: " + newFileName);
 					
 					// GET NEW FILE TEXT
-					newFileText = "";
+					String newFileText = "";
 					String oneLine;
 					
 					while (true) {
@@ -197,6 +198,46 @@ public class ServerThread extends Thread{
 					Server.updateJsonUsers();
 					System.out.println("DATABASE UPDATED");
 					
+				}
+				
+				if (clientMsg.equals(LINKONCHANGE_REQUEST)) {
+					System.out.println("LinkOn change request");
+					
+					// change LinkOn
+					currentUser.setLinkOn(!currentUser.isLinkOn());
+					
+					Server.updateJsonUsers();
+				}
+				
+				if (clientMsg.equals(GETUSER_BY_SHARELINK)) {
+					System.out.println("VISIT REQUEST");
+					
+					String shareLink = fromClientStream.readLine();
+					
+					User user = Server.getUserByShareLink(shareLink);
+					
+					if (user != null) {
+						toClientStream.println(SUCCESS_MSG);
+						
+						// Set currentUser to chosen user
+						currentUser = user;
+						
+						// Send chosen user to client
+						objectToClientStream.writeObject(user);
+					}
+					else {
+						toClientStream.println(ERROR_MSG);
+						
+						
+					}
+					
+				}
+				
+				if (clientMsg.equals(LOGOUT_REQUEST)) {
+					System.out.println("Logout request");
+					System.out.println("Client dissconected");
+					
+					currentUser = null;
 				}
 				
 				

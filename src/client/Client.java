@@ -5,6 +5,7 @@ import java.awt.EventQueue;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Array;
 import java.net.Socket;
@@ -16,6 +17,7 @@ import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 
 import server.FileConvertor;
+import server.userClasses.User;
 
 import javax.swing.JButton;
 import java.awt.event.ActionListener;
@@ -45,9 +47,9 @@ public class Client extends JFrame {
 	
 	// App content pane
 	private JPanel appContentPane;
-	private JLabel lblPls;
-	private JLabel lblNewLabel;
-	private JComboBox comboBox;
+	private JLabel lblWelcome;
+	private JLabel lblYourFiles;
+	private JComboBox comboBoxYourFiles;
 	private JTextArea textArea;
 	private JLabel lblSelectedFile;
 	private JLabel lblUploadANew;
@@ -71,14 +73,17 @@ public class Client extends JFrame {
 	static final String REGISTER_REQUEST = "***register_request";
 	static final String FILE_REQUEST = "***file_request";
 	static final String UPLOAD_REQUEST = "***upload_request";
+	static final String LINKONCHANGE_REQUEST = "***linkchange_request";
+	static final String GETUSER_BY_SHARELINK = "***getuserbysharelink";
+	static final String LOGOUT_REQUEST = "***logout_request";
 	Socket connectionSocket = null;
 	BufferedReader fromServerStream = null;
 	PrintStream toServerStream = null;
+	ObjectInputStream objectFromServerStream = null;
 	String serverMsg;
-	String currentUsername = "mata998";
-	String[] currentFiles = null;
-	String currentFilesString;
-	String requestedFileText = ""; ///////
+	User currentUser = new User();
+	String requestedFileText = "";
+	boolean itsVisit = false; ///////
 	private JLabel lblHaveAccount;
 	private JButton btnGoToLogin;
 	private JButton btnLogOut;
@@ -94,6 +99,9 @@ public class Client extends JFrame {
 	private JLabel lblTheirFiles;
 	private JLabel lblYouSharedTo;
 	private JTextField textShareTo;
+	private JTextField textShareLink;
+	private JLabel lblUseShareLink;
+	private JButton btnVisit;
 	/////
 	
 	
@@ -148,6 +156,9 @@ public class Client extends JFrame {
 				logInContentPane.add(getLblLogIn());
 				logInContentPane.add(getBtnGoToRegister());
 				logInContentPane.add(getLblNoAccount());		
+				logInContentPane.add(getTextShareLink());
+				logInContentPane.add(getLblUseShareLink());
+				logInContentPane.add(getBtnVisit());
 				
 				
 			} catch (Exception e) {
@@ -178,6 +189,8 @@ public class Client extends JFrame {
 		toServerStream = 
 						new PrintStream(
 							connectionSocket.getOutputStream());
+		
+		objectFromServerStream = new ObjectInputStream(connectionSocket.getInputStream());
 			
 	}
 	
@@ -215,20 +228,11 @@ public class Client extends JFrame {
 						// LOG IN SUCCESSFUL ----------
 						if (serverMsg.equals(SUCCESS_MSG)) {
 							System.out.println("YAY");
-							currentUsername = new String(userName);
-							
-							// GETTING FILE LIST
-							serverMsg = fromServerStream.readLine();
-							
-							if (serverMsg.equals(ERROR_MSG)) {
-								currentFilesString = "";
-								currentFiles = null;
-							}
-							else {
-								currentFilesString = new String(serverMsg);
-								currentFiles = serverMsg.split(";");
-							}
 
+							// Get User object
+							currentUser = (User) objectFromServerStream.readObject();
+							
+							currentUser.showAll();
 							
 							// CHANGE CONTENT PANE
 							Client.this.setContentPane(getAppContentPane());
@@ -245,7 +249,7 @@ public class Client extends JFrame {
 						}
 						
 						
-					} catch (IOException e) {
+					} catch (Exception e) {
 						JOptionPane.showMessageDialog(
 								Client.this,
 								"Server stopped working", 
@@ -288,8 +292,8 @@ public class Client extends JFrame {
 			appContentPane = new JPanel();			
 			appContentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 			appContentPane.setLayout(null);
-			appContentPane.add(getLblPls());
-			appContentPane.add(getLblNewLabel());
+			appContentPane.add(getLblWelcome());
+			appContentPane.add(getLblYourFiles());
 			appContentPane.add(getTextArea());
 			appContentPane.add(getLblSelectedFile());
 			appContentPane.add(getLblUploadANew());
@@ -313,12 +317,29 @@ public class Client extends JFrame {
 			appContentPane.add(getTextShareTo());
 			
 //			appContentPane.add(getComboBoxYourFilesTEST());
-			
-			if (currentFiles != null) {
-				appContentPane.add(getComboBoxYourFiles(currentFiles));	
+						
+			if (currentUser.getFiles().isEmpty() == false) {
+				appContentPane.add(getComboBoxYourFiles(currentUser.getFilesStringArr()));	
 			}
 			else {
 				appContentPane.add(getComboBoxYourFiles(new String[] {"No files"}));
+			}
+			
+			// REMOVE things that visiters cant do
+			if (itsVisit) {
+				lblWelcome.setText("Welcome to " + currentUser.getUsername() + "'s drive");
+				lblYourFiles.setText("Files");
+				appContentPane.remove(lblLinkForSharing);
+				appContentPane.remove(btnLink);
+				appContentPane.remove(textLink);
+				appContentPane.remove(lblShareWith);
+				appContentPane.remove(lblYouSharedTo);
+				appContentPane.remove(textShareTo);
+				appContentPane.remove(comboBoxSharedTo);
+				appContentPane.remove(lblEnterFilePath);
+				appContentPane.remove(lblUploadANew);
+				appContentPane.remove(textFilePath);
+				appContentPane.remove(btnUpload);
 			}
 			
 		}
@@ -327,20 +348,20 @@ public class Client extends JFrame {
 
 	// COMBOBOX ACTION
 	private JComboBox getComboBoxYourFiles(String[] filesToShow) {
-			if (comboBox == null) {
-				comboBox = new JComboBox();
-				comboBox.setModel(new DefaultComboBoxModel(filesToShow));
-				comboBox.setToolTipText("");
-				comboBox.setBounds(10, 85, 96, 20);
+			if (comboBoxYourFiles == null) {
+				comboBoxYourFiles = new JComboBox();
+				comboBoxYourFiles.setModel(new DefaultComboBoxModel(filesToShow));
+				comboBoxYourFiles.setToolTipText("");
+				comboBoxYourFiles.setBounds(10, 85, 96, 20);
 				
 				
-				comboBox.addActionListener(new ActionListener() {
+				comboBoxYourFiles.addActionListener(new ActionListener() {
 					public void actionPerformed(ActionEvent arg0) {
 						
 						try {
-							String selectedFile = (String) comboBox.getSelectedItem();
+							String selectedFile = (String) comboBoxYourFiles.getSelectedItem();
 							
-							if (currentFiles == null) {
+							if (currentUser.getFiles().isEmpty()) {
 								return;
 							}
 							
@@ -382,7 +403,7 @@ public class Client extends JFrame {
 					}
 				});
 			}
-			return comboBox;
+			return comboBoxYourFiles;
 		}
 	
 	// UPLOAD BTN ACTION
@@ -416,7 +437,16 @@ public class Client extends JFrame {
 					}
 					
 					
-					if (currentFiles != null && currentFiles.length == 5) {
+//					if (currentFiles != null && currentFiles.length == 5) {
+//						JOptionPane.showMessageDialog(
+//								Client.this,
+//								"You have 5 files, you can't upload more", 
+//								"Error",
+//								JOptionPane.ERROR_MESSAGE);
+//						return;
+//					}
+					
+					if (currentUser.getFiles().size() == 5) {
 						JOptionPane.showMessageDialog(
 								Client.this,
 								"You have 5 files, you can't upload more", 
@@ -443,22 +473,36 @@ public class Client extends JFrame {
 					toServerStream.println(SUCCESS_MSG);
 					
 					// UPDATE currentUser files
-					if (currentFiles != null) {
-						String[] newCurrentFiles = Arrays.copyOf(currentFiles, currentFiles.length+1);
-						newCurrentFiles[newCurrentFiles.length-1] = fileName;
+//					if (currentFiles != null) {
+//						String[] newCurrentFiles = Arrays.copyOf(currentFiles, currentFiles.length+1);
+//						newCurrentFiles[newCurrentFiles.length-1] = fileName;
+//						
+//						currentFiles = newCurrentFiles;
+//						
+//						// UPDATE COMBO BOX
+//						comboBox.addItem(fileName);
+//					}
+//					else {
+//						currentFiles = new String[1];
+//						currentFiles[0] = fileName;
+//						
+//						// UPDATE COMBO BOX
+//						comboBox.insertItemAt(fileName, 0);
+//						comboBox.removeItemAt(1);
+//					}
+					if (currentUser.getFiles().isEmpty() == false) {
 						
-						currentFiles = newCurrentFiles;
+						currentUser.getFiles().add(fileName);
 						
 						// UPDATE COMBO BOX
-						comboBox.addItem(fileName);
+						comboBoxYourFiles.addItem(fileName);
 					}
 					else {
-						currentFiles = new String[1];
-						currentFiles[0] = fileName;
+						currentUser.getFiles().add(fileName);
 						
 						// UPDATE COMBO BOX
-						comboBox.insertItemAt(fileName, 0);
-						comboBox.removeItemAt(1);
+						comboBoxYourFiles.insertItemAt(fileName, 0);
+						comboBoxYourFiles.removeItemAt(1);
 					}
 					
 					
@@ -533,9 +577,8 @@ public class Client extends JFrame {
 						if (serverMsg.equals(SUCCESS_MSG)) {
 							System.out.println("SUCCESS");
 							
-							currentUsername = new String(userName);
-							currentFilesString = "";
-							currentFiles = null;
+							// Get User object from server
+							currentUser = (User) objectFromServerStream.readObject();
 							
 							JOptionPane.showMessageDialog(
 									Client.this,
@@ -659,28 +702,28 @@ public class Client extends JFrame {
 	
 	// App items
 	private JComboBox getComboBoxYourFilesTEST() {
-		if (comboBox == null) {
-			comboBox = new JComboBox();
-			comboBox.setModel(new DefaultComboBoxModel(new String[] {"test1", "test2", "test3"}));
-			comboBox.setToolTipText("");
-			comboBox.setBounds(10, 85, 96, 20);
+		if (comboBoxYourFiles == null) {
+			comboBoxYourFiles = new JComboBox();
+			comboBoxYourFiles.setModel(new DefaultComboBoxModel(new String[] {"test1", "test2", "test3"}));
+			comboBoxYourFiles.setToolTipText("");
+			comboBoxYourFiles.setBounds(10, 85, 96, 20);
 		}
-		return comboBox;
+		return comboBoxYourFiles;
 	}
-	private JLabel getLblPls() {
-		if (lblPls == null) {
-			lblPls = new JLabel("Welcome "+ currentUsername);
-			lblPls.setFont(new Font("Tahoma", Font.PLAIN, 16));
-			lblPls.setBounds(10, 11, 202, 14);
+	private JLabel getLblWelcome() {
+		if (lblWelcome == null) {
+			lblWelcome = new JLabel("Welcome "+ currentUser.getUsername());
+			lblWelcome.setFont(new Font("Tahoma", Font.PLAIN, 16));
+			lblWelcome.setBounds(10, 11, 202, 14);
 		}
-		return lblPls;
+		return lblWelcome;
 	}
-	private JLabel getLblNewLabel() {
-		if (lblNewLabel == null) {
-			lblNewLabel = new JLabel("Your files");
-			lblNewLabel.setBounds(10, 62, 69, 14);
+	private JLabel getLblYourFiles() {
+		if (lblYourFiles == null) {
+			lblYourFiles = new JLabel("Your files");
+			lblYourFiles.setBounds(10, 62, 69, 14);
 		}
-		return lblNewLabel;
+		return lblYourFiles;
 	}
 	private JTextArea getTextArea() {
 		if (textArea == null) {
@@ -722,6 +765,50 @@ public class Client extends JFrame {
 	private JButton getBtnLogOut() {
 		if (btnLogOut == null) {
 			btnLogOut = new JButton("Log out");
+			btnLogOut.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent e) {
+					try {
+						
+						toServerStream.println(LOGOUT_REQUEST);
+						
+						// Restart vars
+						currentUser = new User();
+						itsVisit = false;
+
+						lblWelcome = null;
+						comboBoxYourFiles = null;
+						comboBoxWhoShared = null;
+						comboBoxTheirFiles = null;
+						comboBoxSharedTo = null;
+						textArea = null;
+						textFilePath = null;
+						textShareTo = null;
+						textLink = null;
+						btnLink = null;
+						
+						appContentPane = null;
+						
+						textUsername = null;
+						textPassword = null;
+						textShareLink = null;
+						
+						logInContentPane = null;
+						
+						textRegUsername = null;
+						textRegPassword = null;
+						
+						registerContentPane = null;
+						
+						// CHANGE CONTENT PANE
+						Client.this.setContentPane(getLogInContentPane());
+						Client.this.validate();
+					}
+					catch (Exception ex) {
+						// TODO: handle exception
+					}
+					
+				}
+			});
 			btnLogOut.setBounds(471, 346, 89, 23);
 		}
 		return btnLogOut;
@@ -729,16 +816,52 @@ public class Client extends JFrame {
 	private JTextField getTextLink() {
 		if (textLink == null) {
 			textLink = new JTextField();
+			
+			if (currentUser.isLinkOn()) {
+				textLink.setText(currentUser.getLink());
+			}
+			
 			textLink.setEditable(false);
-			textLink.setText("asdasdasd");
-			textLink.setBounds(327, 31, 134, 20);
+			textLink.setBounds(327, 31, 141, 20);
 			textLink.setColumns(10);
 		}
 		return textLink;
 	}
 	private JButton getBtnLink() {
 		if (btnLink == null) {
-			btnLink = new JButton("Link ON");
+			
+			btnLink = new JButton("TEXT");
+			
+			if (currentUser.isLinkOn()) {
+				btnLink.setText("Link ON");
+			}
+			else {
+				btnLink.setText("Link OFF");
+			}
+			
+			
+			btnLink.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent arg0) {
+					toServerStream.println(LINKONCHANGE_REQUEST);
+					
+					// TURN OFF
+					if (btnLink.getText().equals("Link ON")) {
+						textLink.setText("");
+						
+						btnLink.setText("Link OFF");
+						
+						
+						
+					} // TURN ON
+					else if (btnLink.getText().equals("Link OFF")) {
+						textLink.setText(currentUser.getLink());
+						
+						btnLink.setText("Link ON");
+						
+					}
+					
+				}
+			});
 			btnLink.setBounds(471, 28, 89, 23);
 		}
 		return btnLink;
@@ -750,7 +873,6 @@ public class Client extends JFrame {
 		}
 		return lblLinkForSharing;
 	}
-		// new stuff
 	private JButton getBtnDownload() {
 		if (btnDownload == null) {
 			btnDownload = new JButton("Download");
@@ -875,4 +997,67 @@ public class Client extends JFrame {
 	
 	
 
+	private JTextField getTextShareLink() {
+		if (textShareLink == null) {
+			textShareLink = new JTextField();
+			textShareLink.setBounds(243, 301, 89, 20);
+			textShareLink.setColumns(10);
+		}
+		return textShareLink;
+	}
+	private JLabel getLblUseShareLink() {
+		if (lblUseShareLink == null) {
+			lblUseShareLink = new JLabel("Use share link");
+			lblUseShareLink.setHorizontalAlignment(SwingConstants.CENTER);
+			lblUseShareLink.setBounds(10, 276, 550, 14);
+		}
+		return lblUseShareLink;
+	}
+	private JButton getBtnVisit() {
+		if (btnVisit == null) {
+			btnVisit = new JButton("Visit");
+			btnVisit.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent e) {
+					try {
+						String shareLink = textShareLink.getText();
+						
+						toServerStream.println(GETUSER_BY_SHARELINK);
+						
+						toServerStream.println(shareLink);
+						
+						serverMsg = fromServerStream.readLine();
+						
+						if (serverMsg.equals(SUCCESS_MSG)) {
+							
+							currentUser = (User) objectFromServerStream.readObject();
+							itsVisit = true;
+							
+							// CHANGE CONTENT PANE
+							Client.this.setContentPane(getAppContentPane());
+							Client.this.validate();
+						}
+						else {
+							JOptionPane.showMessageDialog(
+									Client.this,
+									"That share link is not available", 
+									"Error",
+									JOptionPane.ERROR_MESSAGE);
+						}
+						
+					}
+					catch (Exception ex) {
+						JOptionPane.showMessageDialog(
+								Client.this,
+								"Server stopped working", 
+								"Error",
+								JOptionPane.ERROR_MESSAGE);
+						
+						dispose();
+					}
+				}
+			});
+			btnVisit.setBounds(243, 335, 89, 23);
+		}
+		return btnVisit;
+	}
 }
