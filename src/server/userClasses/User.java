@@ -10,6 +10,7 @@ public class User implements Serializable{
 	private List<String> files = new LinkedList<>();
 	private String link = "";
 	private boolean linkOn = false;
+	private boolean isPremium = false;
 	private List<String> sharedTo = new LinkedList<>();
 	private List<String> sharedFrom = new LinkedList<>();
 	
@@ -28,9 +29,6 @@ public class User implements Serializable{
 	public List<String> getFiles() {
 		return files;
 	}
-	
-	
-	// new stuff
 	public String getLink() {
 		return link;
 	}
@@ -49,6 +47,17 @@ public class User implements Serializable{
 	public List<String> getSharedFrom() {
 		return sharedFrom;
 	}
+	public boolean isPremium() {
+		return isPremium;
+	}
+	public void setPremium(boolean isPremium) {
+		this.isPremium = isPremium;
+	}
+	
+	
+	public void addFile(String newFile) {
+		files.add(newFile);
+	}
 	
 	public void addSharedToUser(String user) {
 		sharedTo.add(user);
@@ -58,18 +67,40 @@ public class User implements Serializable{
 		sharedFrom.add(user);
 	}
 
-	
-	public String getFilesString() {
-		String text = "";
-		
-		for (String file : files) {
-			
-			text = text + file + ";";
-			
+
+	public boolean fileExists(String file) {
+		for (String x : files) {
+			if (x.equals(file)) {
+				return true;
+			}
+			                   
 		}
 		
-		return text;
+		return false;
 	}
+
+	public boolean sharedToUserExists(String user) {
+		for (String x : sharedTo) {
+			if (x.equals(user)) {
+				return true;
+			}
+			                   
+		}
+		
+		return false;
+	}
+
+	public boolean sharedFromUserExists(String user) {
+		for (String x : sharedFrom) {
+			if (x.equals(user)) {
+				return true;
+			}
+			                   
+		}
+		
+		return false;
+	}
+	
 	
 	public String[] getFilesStringArr() {
 		String[] arr = new String[files.size()];
@@ -82,21 +113,39 @@ public class User implements Serializable{
 		return arr;
 	}
 	
-	public void setFilesFromString(String text) {
+	public String getFilesSemiColon() {
+		String text = "";
 		
-		String[] filesArr = text.split(";");
-		
-		files.clear();
-		
-		for (String file : filesArr) {
-			files.add(file);
+		for (String x : files) {
+			text = text + x + ";";
 		}
 		
+		return text;
 	}
 	
-	public void addFile(String newFile) {
-		files.add(newFile);
+	public String[] getSharedToUsersStringArr() {
+		String[] arr = new String[sharedTo.size()];
+		int n = 0;
+		
+		for (String x : sharedTo) {
+			arr[n++] = x;
+		}                         
+		                 
+		return arr;
 	}
+
+	public String[] getSharedFromUsersStringArr() {
+		String[] arr = new String[sharedFrom.size()];
+		int n = 0;
+		
+		for (String x : sharedFrom) {
+			arr[n++] = x;
+		}                         
+		                 
+		return arr;
+	}
+
+	
 	
 	
 	public void showAll() {
@@ -119,4 +168,5 @@ public class User implements Serializable{
 		
 		
 	}
+
 }

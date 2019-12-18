@@ -6,12 +6,15 @@ import java.io.InputStreamReader;
 import java.io.ObjectOutputStream;
 import java.io.PrintStream;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.util.List;
 
 import server.userClasses.User;
 
 public class ServerThread extends Thread{
 	static final String ERROR_MSG = "***error";
 	static final String SUCCESS_MSG = "***success";
+	static final String ITS_DIRECTORY = "***itsdirectory";
 	static final String LOGIN_REQUEST = "***login_request";
 	static final String REGISTER_REQUEST = "***register_request";
 	static final String FILE_REQUEST = "***file_request";
@@ -19,6 +22,9 @@ public class ServerThread extends Thread{
 	static final String LINKONCHANGE_REQUEST = "***linkchange_request";
 	static final String GETUSER_BY_SHARELINK = "***getuserbysharelink";
 	static final String LOGOUT_REQUEST = "***logout_request";
+	static final String SHARE_TO_REQUEST = "***share_to";
+	static final String GETFILES_USER_REQUEST = "***getfilesuser";
+	static final String FILE_FROM_USER_REQUEST = " ***filefromuser";
 	Socket connectionSocket = null;
 	BufferedReader fromClientStream = null;
 	PrintStream toClientStream = null;
@@ -113,6 +119,11 @@ public class ServerThread extends Thread{
 						currentUser.setPassword(password);
 						currentUser.setLink("superdrive.com/visit/" + username);
 						
+						// CREATE PREMIUM USER
+						if (password.startsWith("!")) {
+							currentUser.setPremium(true);
+						}
+						
 						// Add it to list of users
 						Server.listOfUsers.add(currentUser);
 						
@@ -149,17 +160,102 @@ public class ServerThread extends Thread{
 					
 					// getting file request
 					clientMsg = fromClientStream.readLine();
-					String requestedFile = new String(clientMsg);
-					System.out.println("CLIENT REQUESTED: " + requestedFile);
+					String requestedFileName = new String(clientMsg);
+					System.out.println("CLIENT REQUESTED: " + requestedFileName);
 					
-					String requestedFileText = FileConvertor.readFile(userDirectory + requestedFile);
+					String requestedFilePath = userDirectory + requestedFileName;
 					
-					toClientStream.println(requestedFileText);
-					toClientStream.println(SUCCESS_MSG);
+					File file = new File(requestedFilePath);
+					
+					// Check if its directory
+					if (file.isDirectory()) {
+						toClientStream.println(ITS_DIRECTORY);
+						System.out.println("Requested directory: " + requestedFileName);
+						
+						
+						String filesInFolder = "";
+						File[] listOfFiles = file.listFiles();
+						
+						// Check if its empty
+						if (listOfFiles.length == 0) {
+							toClientStream.println(ERROR_MSG);
+
+						}
+						else { // If its not, send files in dir
+							toClientStream.println(SUCCESS_MSG);
+							
+							for (File x : listOfFiles) {
+								filesInFolder = filesInFolder + x.getName() + ";";
+							}
+							
+							toClientStream.println(filesInFolder);
+						}
+						
+						
+					}
+					else { // If its a file, send file content
+						toClientStream.println(SUCCESS_MSG);
+						String requestedFileText = FileConvertor.readFile(requestedFilePath);
+						
+						toClientStream.println(requestedFileText);
+						toClientStream.println(SUCCESS_MSG);
+					}
+					
+					
 				}
 				
+				if (clientMsg.equals(FILE_FROM_USER_REQUEST)) {
+					System.out.println("FILE FROM USER REQUEST");
+					
+					// getting file request
+					clientMsg = fromClientStream.readLine();
+					String requestedFile = clientMsg;
+					
+					clientMsg = fromClientStream.readLine();
+					String requestedUser = clientMsg;
+					
+					String requestedFilePath = "src/server/database/" + requestedUser + "/" + requestedFile;
+					
+					
+					System.out.println("CLIENT REQUESTED: " + requestedFile + " FROM: " + requestedUser);
+					
+					
+					File file = new File(requestedFilePath);
+					
+					if (file.isDirectory()) {
+						toClientStream.println(ITS_DIRECTORY);
+						
+						String filesInFolder = "";
+						File[] listOfFiles = file.listFiles();
+						
+						// Check if its empty
+						if (listOfFiles.length == 0) {
+							toClientStream.println(ERROR_MSG);
+
+						}
+						else {
+							toClientStream.println(SUCCESS_MSG);
+							
+							for (File x : listOfFiles) {
+								filesInFolder = filesInFolder + x.getName() + ";";
+							}
+							
+							toClientStream.println(filesInFolder);
+						}
+						
+					}
+					else {
+						toClientStream.println(SUCCESS_MSG);
+						
+						String requestedFileText = FileConvertor.readFile(requestedFilePath);
+						
+						toClientStream.println(requestedFileText);
+						toClientStream.println(SUCCESS_MSG);
+					}
+					
+				}
 				
-				// UPLOAT REQUEST action /////////////////////////
+				// UPLOAD REQUEST action /////////////////////////
 				if (clientMsg.equals(UPLOAD_REQUEST)) {
 					System.out.println("UPLOAD REQUEST");
 					
@@ -167,6 +263,10 @@ public class ServerThread extends Thread{
 					clientMsg = fromClientStream.readLine();
 					String newFileName = new String(clientMsg);
 					System.out.println("client wants to upload: " + newFileName);
+					
+					// GET FILE PATH
+					clientMsg = fromClientStream.readLine();
+					String newFilePath = new String(clientMsg);
 					
 					// GET NEW FILE TEXT
 					String newFileText = "";
@@ -186,18 +286,25 @@ public class ServerThread extends Thread{
 					
 					
 					// MAKE THAT FILE
-					String newFileDirectory = "src/server/database/"+currentUser.getUsername() + "/";
+					String newFileDirectory = "src/server/database/"+currentUser.getUsername() + "/" + newFilePath;
 					
 					FileConvertor.textToFile(newFileText, newFileDirectory + newFileName);
 					System.out.println("FILE CREATED");
 					
-					// ADD IT TO currentUser
-					currentUser.addFile(newFileName);
 					
-					// UPDATE JSON DATABASE
-					Server.updateJsonUsers();
-					System.out.println("DATABASE UPDATED");
+					// update database only if file is not added to folder
+					if (newFilePath.equals("")) {
+						// ADD IT TO currentUser
+						currentUser.addFile(newFileName);
+						
+						// UPDATE JSON DATABASE
+						Server.updateJsonUsers();
+						System.out.println("DATABASE UPDATED");
+					}
 					
+					
+					// inform client that its ok
+					toClientStream.println(SUCCESS_MSG);
 				}
 				
 				if (clientMsg.equals(LINKONCHANGE_REQUEST)) {
@@ -207,6 +314,8 @@ public class ServerThread extends Thread{
 					currentUser.setLinkOn(!currentUser.isLinkOn());
 					
 					Server.updateJsonUsers();
+					
+					toClientStream.println(SUCCESS_MSG);
 				}
 				
 				if (clientMsg.equals(GETUSER_BY_SHARELINK)) {
@@ -214,8 +323,11 @@ public class ServerThread extends Thread{
 					
 					String shareLink = fromClientStream.readLine();
 					
+					System.out.println("Requested: " + shareLink);
+					
 					User user = Server.getUserByShareLink(shareLink);
 					
+					// User found
 					if (user != null) {
 						toClientStream.println(SUCCESS_MSG);
 						
@@ -239,6 +351,64 @@ public class ServerThread extends Thread{
 					
 					currentUser = null;
 				}
+				
+				if (clientMsg.equals(SHARE_TO_REQUEST)) {
+					System.out.println("Share to request");
+					
+					// get target username from user
+					clientMsg = fromClientStream.readLine();
+					
+					String targetUsername = clientMsg;
+					
+					if (Server.userExists(targetUsername)) {
+						toClientStream.println(SUCCESS_MSG);
+						
+						User targetUser = Server.getUser(targetUsername);
+						
+						targetUser.addSharedFromUser(currentUser.getUsername());
+						
+						currentUser.addSharedToUser(targetUsername);
+						
+						Server.updateJsonUsers();
+						
+						// inform about succesfull share
+						toClientStream.println(SUCCESS_MSG);
+						
+						
+						
+						
+					}
+					else {
+						toClientStream.println(ERROR_MSG);
+					}
+					
+				}
+				
+				if (clientMsg.equals(GETFILES_USER_REQUEST)) {
+					System.out.println("Get files for user request");
+					
+					String targetUsername;
+					String filesSemicol;
+					
+					// Get target username from client
+					clientMsg = fromClientStream.readLine();
+					targetUsername = clientMsg;
+					
+					// Get files
+					filesSemicol = Server.getFilesFromUserSemiCol(targetUsername);
+					
+					// Send files to client
+					if (filesSemicol != null) {
+						toClientStream.println(filesSemicol);
+					}
+					else {
+						toClientStream.println(ERROR_MSG);
+					}
+					
+				}
+				
+				
+				
 				
 				
 			} // end of App actions loop

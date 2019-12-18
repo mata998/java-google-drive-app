@@ -1,9 +1,11 @@
 package server;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.lang.reflect.Type;
 import java.util.LinkedList;
 import java.util.List;
@@ -17,9 +19,12 @@ public class FileConvertor {
 	
 	public static void textToFile(String text, String fileName) {
 		
-		try (FileWriter fw =new FileWriter(fileName)){
+		try (FileWriter fw =new FileWriter(fileName);
+			 BufferedWriter bw = new BufferedWriter(fw);
+			 PrintWriter out = new PrintWriter(bw)
+			){
 			
-			fw.write(text);
+			out.print(text);
 			
 		} catch (IOException e) {
 			System.out.println("ERROR in textToFile");

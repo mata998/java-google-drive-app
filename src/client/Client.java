@@ -15,8 +15,10 @@ import java.util.List;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
+import javax.swing.filechooser.FileSystemView;
 
 import server.FileConvertor;
+import server.Server;
 import server.userClasses.User;
 
 import javax.swing.JButton;
@@ -26,10 +28,16 @@ import javax.swing.JTextField;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.SwingConstants;
+import javax.swing.UIManager;
+import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.JComboBox;
+import javax.swing.JFileChooser;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JTextArea;
 import java.awt.Font;
+import javax.swing.JScrollPane;
+import javax.swing.border.LineBorder;
+import java.awt.Color;
 
 public class Client extends JFrame {
 
@@ -69,6 +77,7 @@ public class Client extends JFrame {
 	// My things
 	static final String ERROR_MSG = "***error";
 	static final String SUCCESS_MSG = "***success";
+	static final String ITS_DIRECTORY = "***itsdirectory";
 	static final String LOGIN_REQUEST = "***login_request";
 	static final String REGISTER_REQUEST = "***register_request";
 	static final String FILE_REQUEST = "***file_request";
@@ -76,13 +85,19 @@ public class Client extends JFrame {
 	static final String LINKONCHANGE_REQUEST = "***linkchange_request";
 	static final String GETUSER_BY_SHARELINK = "***getuserbysharelink";
 	static final String LOGOUT_REQUEST = "***logout_request";
+	static final String SHARE_TO_REQUEST = "***share_to";
+	static final String GETFILES_USER_REQUEST = "***getfilesuser";
+	static final String FILE_FROM_USER_REQUEST = " ***filefromuser";
 	Socket connectionSocket = null;
 	BufferedReader fromServerStream = null;
 	PrintStream toServerStream = null;
 	ObjectInputStream objectFromServerStream = null;
 	String serverMsg;
 	User currentUser = new User();
-	String requestedFileText = "";
+	String selectedFilePath;
+	String selectedFileName;
+	String currentPath = "";
+	String sharedFromCurrentPath = "";
 	boolean itsVisit = false; ///////
 	private JLabel lblHaveAccount;
 	private JButton btnGoToLogin;
@@ -92,7 +107,7 @@ public class Client extends JFrame {
 	private JLabel lblLinkForSharing;
 	private JButton btnDownload;
 	private JLabel lblWhoSharedWith;
-	private JComboBox comboBoxWhoShared;
+	private JComboBox comboBoxSharedFrom;
 	private JLabel lblShareWith;
 	private JComboBox comboBoxSharedTo;
 	private JComboBox comboBoxTheirFiles;
@@ -102,6 +117,10 @@ public class Client extends JFrame {
 	private JTextField textShareLink;
 	private JLabel lblUseShareLink;
 	private JButton btnVisit;
+	private JButton btnShareTo;
+	private JButton btnChoseFile;
+	private JScrollPane scrollPane;
+	private JLabel lblPremium;
 	/////
 	
 	
@@ -131,12 +150,20 @@ public class Client extends JFrame {
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(430, 200, 586, 418);
 
+		try {
+			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+			
+			connectToServer();
+		} catch (Exception e) {
+			System.out.println("SERVER DOWN");
+		} 
 		
 		setContentPane(getLogInContentPane());
 //		setContentPane(getAppContentPane());
 //		setContentPane(getRegisterContentPane());
 		
 	}
+	
 	
 	// LOG IN CONTENT PANE
 	private JPanel getLogInContentPane() {
@@ -145,28 +172,20 @@ public class Client extends JFrame {
 			logInContentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 			logInContentPane.setLayout(null);
 			
-			try {
-				connectToServer();
-				
-				logInContentPane.add(getBtnLogIn());
-				logInContentPane.add(getTextUsername());
-				logInContentPane.add(getTextPassword());
-				logInContentPane.add(getLblUsername());
-				logInContentPane.add(getLblPassword());
-				logInContentPane.add(getLblLogIn());
-				logInContentPane.add(getBtnGoToRegister());
-				logInContentPane.add(getLblNoAccount());		
-				logInContentPane.add(getTextShareLink());
-				logInContentPane.add(getLblUseShareLink());
-				logInContentPane.add(getBtnVisit());
-				
-				
-			} catch (Exception e) {
-				logInContentPane.add(getLblServerDown());
-				
-				System.out.println("SERVER DOWN");
-			}
 			
+			logInContentPane.add(getBtnLogIn());
+			logInContentPane.add(getTextUsername());
+			logInContentPane.add(getTextPassword());
+			logInContentPane.add(getLblUsername());
+			logInContentPane.add(getLblPassword());
+			logInContentPane.add(getLblLogIn());
+			logInContentPane.add(getBtnGoToRegister());
+			logInContentPane.add(getLblNoAccount());		
+			logInContentPane.add(getTextShareLink());
+			logInContentPane.add(getLblUseShareLink());
+			logInContentPane.add(getBtnVisit());
+				
+				
 			
 		}
 		return logInContentPane;
@@ -194,7 +213,7 @@ public class Client extends JFrame {
 			
 	}
 	
-	// LOGIN BUTTON
+	// BTN LOGIN 
 	private JButton getBtnLogIn() {
 		if (btnLogIn == null) {
 			btnLogIn = new JButton("Log IN");
@@ -283,6 +302,59 @@ public class Client extends JFrame {
 		}
 		return btnGoToRegister;
 	}
+	
+	// BTN VISIT
+	private JButton getBtnVisit() {
+		if (btnVisit == null) {
+			btnVisit = new JButton("Visit");
+			btnVisit.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent e) {
+					try {
+						String shareLink = textShareLink.getText();
+						
+						toServerStream.println(GETUSER_BY_SHARELINK);
+						
+						// Ask for user
+						System.out.println("Visit " + shareLink);
+						toServerStream.println(shareLink);
+						
+						
+						// if user is found
+						serverMsg = fromServerStream.readLine();
+						
+						if (serverMsg.equals(SUCCESS_MSG)) {
+							
+							currentUser = (User) objectFromServerStream.readObject();
+							itsVisit = true;
+							
+							// CHANGE CONTENT PANE
+							Client.this.setContentPane(getAppContentPane());
+							Client.this.validate();
+						}
+						else {
+							JOptionPane.showMessageDialog(
+									Client.this,
+									"That share link is not available", 
+									"Error",
+									JOptionPane.ERROR_MESSAGE);
+						}
+						
+					}
+					catch (Exception ex) {
+						JOptionPane.showMessageDialog(
+								Client.this,
+								"Server stopped working", 
+								"Error",
+								JOptionPane.ERROR_MESSAGE);
+						
+						dispose();
+					}
+				}
+			});
+			btnVisit.setBounds(243, 335, 89, 23);
+		}
+		return btnVisit;
+	}
 	//////////////////////////
 	
 	
@@ -294,7 +366,7 @@ public class Client extends JFrame {
 			appContentPane.setLayout(null);
 			appContentPane.add(getLblWelcome());
 			appContentPane.add(getLblYourFiles());
-			appContentPane.add(getTextArea());
+			appContentPane.add(getScrollPane());
 			appContentPane.add(getLblSelectedFile());
 			appContentPane.add(getLblUploadANew());
 			appContentPane.add(getLblEnterFilePath());
@@ -308,15 +380,20 @@ public class Client extends JFrame {
 			
 			// new stuff
 			appContentPane.add(getLblWhoSharedWith());
-			appContentPane.add(getComboBoxWhoShared());
 			appContentPane.add(getLblShareWith());
-			appContentPane.add(getComboBoxSharedTo());
 			appContentPane.add(getComboBoxTheirFiles());
 			appContentPane.add(getLblTheirFiles());
 			appContentPane.add(getLblYouSharedTo());
 			appContentPane.add(getTextShareTo());
+			appContentPane.add(getBtnShareTo());
+			appContentPane.add(getBtnChoseFile());
+			
+			if (currentUser.isPremium()) {
+				appContentPane.add(getLblPremium());
+			}
 			
 //			appContentPane.add(getComboBoxYourFilesTEST());
+			
 						
 			if (currentUser.getFiles().isEmpty() == false) {
 				appContentPane.add(getComboBoxYourFiles(currentUser.getFilesStringArr()));	
@@ -325,10 +402,29 @@ public class Client extends JFrame {
 				appContentPane.add(getComboBoxYourFiles(new String[] {"No files"}));
 			}
 			
+			
+			if (currentUser.getSharedTo().isEmpty() == false) {
+				appContentPane.add(getComboBoxSharedTo(currentUser.getSharedToUsersStringArr()));
+			}
+			else {
+				appContentPane.add(getComboBoxSharedTo(new String[] {"No users"}));
+			}
+			
+			
+			if (currentUser.getSharedFrom().isEmpty() == false) {
+				appContentPane.add(getComboBoxSharedFrom(currentUser.getSharedFromUsersStringArr()));
+			}
+			else {
+				appContentPane.add(getComboBoxSharedFrom(new String[] {"No users"}));
+			}
+			     
+			
+			
 			// REMOVE things that visiters cant do
 			if (itsVisit) {
 				lblWelcome.setText("Welcome to " + currentUser.getUsername() + "'s drive");
 				lblYourFiles.setText("Files");
+				lblWhoSharedWith.setText("Who shared to them");
 				appContentPane.remove(lblLinkForSharing);
 				appContentPane.remove(btnLink);
 				appContentPane.remove(textLink);
@@ -340,39 +436,734 @@ public class Client extends JFrame {
 				appContentPane.remove(lblUploadANew);
 				appContentPane.remove(textFilePath);
 				appContentPane.remove(btnUpload);
+				appContentPane.remove(btnShareTo);
+				appContentPane.remove(btnChoseFile);
 			}
 			
 		}
 		return appContentPane;
 	}
 
-	// COMBOBOX ACTION
+	// COMBOBOX YOUR FILES
 	private JComboBox getComboBoxYourFiles(String[] filesToShow) {
 			if (comboBoxYourFiles == null) {
 				comboBoxYourFiles = new JComboBox();
 				comboBoxYourFiles.setModel(new DefaultComboBoxModel(filesToShow));
 				comboBoxYourFiles.setToolTipText("");
-				comboBoxYourFiles.setBounds(10, 85, 96, 20);
+				comboBoxYourFiles.setBounds(10, 70, 96, 20);
 				
 				
 				comboBoxYourFiles.addActionListener(new ActionListener() {
 					public void actionPerformed(ActionEvent arg0) {
 						
 						try {
-							String selectedFile = (String) comboBoxYourFiles.getSelectedItem();
+							selectedFileName = (String) comboBoxYourFiles.getSelectedItem();
+							selectedFilePath = currentPath + selectedFileName;
 							
+							System.out.println("Selected file path: " + selectedFilePath);
 							if (currentUser.getFiles().isEmpty()) {
 								return;
 							}
 							
+							if (selectedFilePath.endsWith("/...")) {
+								System.out.println("vracaj nazad");
+								
+								selectedFilePath = selectedFilePath.substring(0, selectedFilePath.lastIndexOf("/"));
+								if (selectedFilePath.contains("/")) {
+									selectedFilePath = selectedFilePath.substring(0, selectedFilePath.lastIndexOf("/"));
+									currentPath = selectedFilePath.substring(0, selectedFilePath.lastIndexOf("/")+1);
+									
+									selectedFileName = selectedFilePath.substring(selectedFilePath.lastIndexOf("/")+1);
+								}
+								else { // GO BACK TO root dir
+									selectedFilePath = null;
+									currentPath = "";
+									
+									comboBoxYourFiles.setModel(new DefaultComboBoxModel(currentUser.getFilesStringArr()));
+									
+									lblSelectedFile.setText("Selected file: ");
+									lblYourFiles.setText("Selected folder: root");
+									textArea.setText("");
+									selectedFileName = null;
+									
+									
+									return;
+								}
+								
+							
+							}
+							
 							// Request a file from server
 							toServerStream.println(FILE_REQUEST);
-							toServerStream.println(selectedFile);
+							toServerStream.println(selectedFilePath);
 							
-							System.out.println("REQUESTED: " + selectedFile);
+							System.out.println("REQUESTED: " + selectedFilePath);
 							
+							
+							// Check if its a directory
+							serverMsg = fromServerStream.readLine();
+							if (serverMsg.equals(ITS_DIRECTORY)) {
+								
+								// Check if its empty or not
+								serverMsg = fromServerStream.readLine();
+								if (serverMsg.equals(SUCCESS_MSG)) {
+									
+									String filesInFolderSemic = fromServerStream.readLine();
+									System.out.println(filesInFolderSemic);
+									
+									String[] filesInFolderArr = filesInFolderSemic.split(";");
+									comboBoxYourFiles.setModel(new DefaultComboBoxModel(filesInFolderArr));
+									comboBoxYourFiles.insertItemAt("...", 0);
+									
+									lblSelectedFile.setText("Selected file: ");
+									lblYourFiles.setText("Selected folder: " + selectedFileName);
+									textArea.setText("");
+									
+									currentPath = currentPath + selectedFileName + "/";
+									selectedFileName = null;
+								}
+								else { // Dir is empty
+									System.out.println("Dir empty");
+									
+									comboBoxYourFiles.setModel(new DefaultComboBoxModel(new String[] {"..."}));
+									
+									lblSelectedFile.setText("Selected file: ");
+									lblYourFiles.setText("Selected folder: " + selectedFileName);
+									textArea.setText("");
+									
+									currentPath = currentPath + selectedFileName + "/";
+									selectedFileName = null;
+								}
+								
+							} // If its not directory then its file
+							else {
+								// Get file from server
+								String requestedFileText = "";
+								String oneLine;
+								
+								while (true) {
+									oneLine = fromServerStream.readLine();
+									
+									if (oneLine.equals(SUCCESS_MSG)) {
+										break;
+									}
+									
+									requestedFileText = requestedFileText + oneLine + "\n";
+								}
+								
+								textArea.setText(requestedFileText);
+								
+								if (itsVisit) {
+									lblSelectedFile.setText("Selected file: " + selectedFileName + "  From: " + currentUser.getUsername());
+								}
+								else {
+									lblSelectedFile.setText("Selected file: " + selectedFileName);
+								}
+							}
+							
+							
+							
+						}
+						catch (Exception e) {
+							e.printStackTrace();
+							System.out.println("SERVER IS DOWN");
+							
+							JOptionPane.showMessageDialog(
+									Client.this,
+									"Server stopped working", 
+									"Error",
+									JOptionPane.ERROR_MESSAGE);
+							
+							dispose();
+						}
+					}
+				});
+			
+			
+			}
+			return comboBoxYourFiles;
+		}
+	
+	// BTN UPLOAD
+	private JButton getBtnUpload() {
+		if (btnUpload == null) {
+			btnUpload = new JButton("Upload!");
+			btnUpload.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent arg0) {
+					try {
+						String filePath = textFilePath.getText();
+						
+						if (filePath.equals("")) {
+							JOptionPane.showMessageDialog(
+									Client.this,
+									"Please eneter file path", 
+									"Error",
+									JOptionPane.ERROR_MESSAGE);
+							return;
+						}
+						
+						String fileText;
+						try {
+							fileText = FileConvertor.readFile(filePath);
+						}
+						catch (Exception e) {
+							JOptionPane.showMessageDialog(
+									Client.this,
+									"That file doesnt exist!", 
+									"Error",
+									JOptionPane.ERROR_MESSAGE);
+							return;
+						}
+						
+						if (currentUser.isPremium() == false && currentUser.getFiles().size() == 5) {
+							JOptionPane.showMessageDialog(
+									Client.this,
+									"You have 5 files, you can't upload more", 
+									"Error",
+									JOptionPane.ERROR_MESSAGE);
+							return;
+						}
+						
+						int index1 = filePath.lastIndexOf("\\")+1;
+						int index2 = filePath.lastIndexOf("/")+1;
+						
+						if (index2 >index1) {
+							index1 = index2;
+						}
+						
+						String fileName = filePath.substring(index1);
+						
+						// SEND UPLOAD REQUEST
+						toServerStream.println(UPLOAD_REQUEST);
+						System.out.println("i wanna UPLOAD!!!");
+						System.out.println(fileName);
+						
+						// SEND FILE NAME
+						toServerStream.println(fileName);
+						
+						// SEND FILE PATH
+						toServerStream.println(currentPath);
+						
+						// SEND FILE TEXT
+						toServerStream.println(fileText);
+						toServerStream.println(SUCCESS_MSG);
+						
+						// if its all ok
+						serverMsg = fromServerStream.readLine();
+						
+						if (serverMsg.equals(SUCCESS_MSG)) {
+							JOptionPane.showMessageDialog(
+									Client.this,
+									"File uploaded successfully!", 
+									"Success",
+									JOptionPane.INFORMATION_MESSAGE);
+							
+							// UPDATE CURRENTUSER FILES
+							if (currentUser.getFiles().isEmpty() == false) {
+								
+								if (currentPath.equals("")) {
+									currentUser.getFiles().add(fileName);									
+								}
+								
+								// UPDATE COMBO BOX
+								comboBoxYourFiles.addItem(fileName);
+								
+								textFilePath.setText("");
+							}
+							else {
+								
+								if (currentPath=="") {
+									currentUser.getFiles().add(fileName);
+								}
+								
+								// UPDATE COMBO BOX
+								comboBoxYourFiles.insertItemAt(fileName, 0);
+								comboBoxYourFiles.removeItemAt(1);
+								
+								textFilePath.setText("");
+							}
+						}
+						
+						
+						
+						
+						
+						
+					}
+					catch (Exception e) {
+						System.out.println("SERVER IS DOWN");
+						
+						JOptionPane.showMessageDialog(
+								Client.this,
+								"Server stopped working", 
+								"Error",
+								JOptionPane.ERROR_MESSAGE);
+						
+						dispose();
+					}
+				}
+			});
+			btnUpload.setBounds(10, 346, 89, 23);
+		}
+		return btnUpload;
+	}
+	
+	// BTN LOGOUT
+	private JButton getBtnLogOut() {
+		if (btnLogOut == null) {
+			btnLogOut = new JButton("Log out");
+			btnLogOut.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent e) {
+					try {
+						
+						int choice = JOptionPane.showConfirmDialog(
+								Client.this,
+								"Want to log out?",
+								"Log out", 
+								JOptionPane.YES_NO_OPTION);
+						
+						if ( choice != JOptionPane.YES_OPTION) {
+							return;
+						}
+						
+						toServerStream.println(LOGOUT_REQUEST);
+						
+						// Restart vars
+						currentUser = new User();
+						itsVisit = false;
+						selectedFileName = null;
+						selectedFilePath = null;
+						currentPath = "";
+						sharedFromCurrentPath = "";
+						
+						appContentPane = null;
+						
+						lblWelcome = null;
+						lblWhoSharedWith = null;
+						lblYourFiles = null;
+						lblSelectedFile = null;
+						lblTheirFiles = null;
+						comboBoxYourFiles = null;
+						comboBoxSharedFrom = null;
+						comboBoxTheirFiles = null;
+						comboBoxSharedTo = null;
+						scrollPane = null;
+						textArea = null;
+						textFilePath = null;
+						textShareTo = null;
+						textLink = null;
+						btnLink = null;
+						
+						
+						
+						logInContentPane = null;
+						
+						textUsername = null;
+						textPassword = null;
+						textShareLink = null;
+						
+						
+						registerContentPane = null;
+						
+						textRegUsername = null;
+						textRegPassword = null;
+						
+						
+						
+						// CHANGE CONTENT PANE
+						Client.this.setContentPane(getLogInContentPane());
+						Client.this.validate();
+					}
+					catch (Exception ex) {
+						
+					}
+					
+				}
+			});
+			btnLogOut.setBounds(471, 346, 89, 23);
+		}
+		return btnLogOut;
+	}
+	
+	// BTN LINK
+	private JButton getBtnLink() {
+		if (btnLink == null) {
+			
+			btnLink = new JButton("TEXT");
+			
+			if (currentUser.isLinkOn()) {
+				btnLink.setText("Link ON");
+			}
+			else {
+				btnLink.setText("Link OFF");
+			}
+			
+			
+			btnLink.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent arg0) {
+					try {
+						toServerStream.println(LINKONCHANGE_REQUEST);
+						
+						// TURN OFF
+						if (btnLink.getText().equals("Link ON")) {
+							textLink.setText("");
+							
+							btnLink.setText("Link OFF");
+							
+							
+							
+						} // TURN ON
+						else if (btnLink.getText().equals("Link OFF")) {
+							textLink.setText(currentUser.getLink());
+							
+							btnLink.setText("Link ON");
+							
+						}
+						
+						serverMsg = fromServerStream.readLine();
+						
+						if (serverMsg.equals(SUCCESS_MSG) == false) {
+							JOptionPane.showMessageDialog(
+									Client.this,
+									"Something went wrong!", 
+									"Error",
+									JOptionPane.ERROR_MESSAGE);
+						}
+						
+					}
+					catch (Exception e) {
+						System.out.println("SERVER IS DOWN");
+						
+						JOptionPane.showMessageDialog(
+								Client.this,
+								"Server stopped working", 
+								"Error",
+								JOptionPane.ERROR_MESSAGE);
+						
+						dispose();
+					}
+					
+				}
+			});
+			btnLink.setBounds(471, 28, 89, 23);
+		}
+		return btnLink;
+	}
+	
+	// BTN SHARE TO
+	private JButton getBtnShareTo() {
+		if (btnShareTo == null) {
+			btnShareTo = new JButton("Share");
+			btnShareTo.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent arg0) {
+					try {
+						String targetUsername = textShareTo.getText();
+						
+						if (targetUsername.equals("")) {
+							JOptionPane.showMessageDialog(
+									Client.this,
+									"Enter field!", 
+									"Error",
+									JOptionPane.ERROR_MESSAGE);
+							
+							return;
+						}
+						
+						if (targetUsername.equals(currentUser.getUsername())) {
+							JOptionPane.showMessageDialog(
+									Client.this,
+									"You can't share to yourself", 
+									"Error",
+									JOptionPane.ERROR_MESSAGE);
+							
+							return;
+						}
+						
+						if (currentUser.sharedToUserExists(targetUsername)) {
+							JOptionPane.showMessageDialog(
+									Client.this,
+									"You already shared to them!", 
+									"Error",
+									JOptionPane.ERROR_MESSAGE);
+							
+							return;
+						}
+
+						toServerStream.println(SHARE_TO_REQUEST);
+						
+						//check if that user exists
+						toServerStream.println(targetUsername);
+						
+						// server answer
+						serverMsg = fromServerStream.readLine();
+						if (serverMsg.equals(ERROR_MSG)) {
+							JOptionPane.showMessageDialog(
+									Client.this,
+									"That user doesn't exist", 
+									"Error",
+									JOptionPane.ERROR_MESSAGE);
+							
+							return;
+						}
+						
+						
+						// if its successfull
+						serverMsg = fromServerStream.readLine();
+						if (serverMsg.equals(SUCCESS_MSG)) {
+						
+							JOptionPane.showMessageDialog(
+									Client.this,
+									"Shared successfully", 
+									"Success",
+									JOptionPane.INFORMATION_MESSAGE);
+							
+							if (currentUser.getSharedTo().isEmpty()) {
+								comboBoxSharedTo.insertItemAt(targetUsername,0);
+								comboBoxSharedTo.removeItemAt(1);
+								currentUser.addSharedToUser(targetUsername);
+							}
+							else {
+								comboBoxSharedTo.addItem(targetUsername);
+								currentUser.addSharedToUser(targetUsername);
+							}
+							
+							
+						}
+						
+						
+					}
+					catch (Exception e) {
+//						e.printStackTrace();
+						System.out.println("SERVER IS DOWN");
+						
+						JOptionPane.showMessageDialog(
+								Client.this,
+								"Server stopped working", 
+								"Error",
+								JOptionPane.ERROR_MESSAGE);
+						
+						dispose();
+					}
+				}
+			});
+			btnShareTo.setBounds(10, 219, 89, 23);
+		}
+		return btnShareTo;
+	}
+	
+	// COMBOBOX SHARED TO
+	private JComboBox getComboBoxSharedTo(String[] listOfItems) {
+		if (comboBoxSharedTo == null) {
+			comboBoxSharedTo = new JComboBox();
+			comboBoxSharedTo.setModel(new DefaultComboBoxModel(listOfItems));
+			comboBoxSharedTo.setToolTipText("");
+			comboBoxSharedTo.setBounds(144, 188, 96, 20);
+		
+		
+			comboBoxSharedTo.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent arg0) {
+					
+					
+				}
+			});
+		
+		}
+		return comboBoxSharedTo;
+	}
+	
+	// COMBOBOX SHARED FROM
+	private JComboBox getComboBoxSharedFrom(String[] listOfItems) {
+		if (comboBoxSharedFrom == null) {
+			comboBoxSharedFrom = new JComboBox();
+			comboBoxSharedFrom.setModel(new DefaultComboBoxModel(listOfItems));
+			comboBoxSharedFrom.setToolTipText("");
+			comboBoxSharedFrom.setBounds(10, 128, 121, 20);
+		
+			comboBoxSharedFrom.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent arg0) {
+					try {
+						String selectedUser = (String) comboBoxSharedFrom.getSelectedItem();
+						
+						if (currentUser.getSharedFrom().isEmpty()) {
+							return;
+						}
+						
+						sharedFromCurrentPath = "";
+						selectedFileName = null;
+						textArea.setText("");
+						lblTheirFiles.setText("Selected folder: root");
+						lblSelectedFile.setText("Selected file: ");
+						
+						String[] listOfFiles = getFilesFromServer(selectedUser);
+						
+						if (listOfFiles[0].equals("") == false) {
+							comboBoxTheirFiles.setEnabled(true);
+							comboBoxTheirFiles.setModel(new DefaultComboBoxModel(listOfFiles));
+						}
+						else {
+							comboBoxTheirFiles.setEnabled(false);
+							comboBoxTheirFiles.setModel(new DefaultComboBoxModel(new String[] {"No files"}));
+						}
+						
+					}
+					catch (Exception e) {
+						System.out.println("SERVER IS DOWN");
+						
+						JOptionPane.showMessageDialog(
+								Client.this,
+								"Server stopped working", 
+								"Error",
+								JOptionPane.ERROR_MESSAGE);
+						
+						dispose();
+					}
+				}
+			});
+		
+			
+			
+		}
+		return comboBoxSharedFrom;
+	}
+	
+	private String[] getFilesFromServer(String targetUsername) {
+		String filesFromServer = "";
+		try {
+			toServerStream.println(GETFILES_USER_REQUEST);
+			
+			// Ask for users files
+			toServerStream.println(targetUsername);
+			
+			// Get files
+			serverMsg = fromServerStream.readLine();
+			
+			if (serverMsg.equals(ERROR_MSG) == false) {
+				
+				filesFromServer = serverMsg;
+				
+			}
+			
+		}
+		catch (Exception e) {
+			
+		}
+		
+		return filesFromServer.split(";");
+	}
+	
+	// COMBOBOX THEIR FILES
+	private JComboBox getComboBoxTheirFiles() {
+		if (comboBoxTheirFiles == null) {
+			comboBoxTheirFiles = new JComboBox();
+			comboBoxTheirFiles.setEnabled(false);
+			comboBoxTheirFiles.setModel(new DefaultComboBoxModel(new String[] {"Select user"}));
+			comboBoxTheirFiles.setToolTipText("");
+			comboBoxTheirFiles.setBounds(144, 128, 96, 20);
+			
+			comboBoxTheirFiles.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent arg0) {
+					
+					try {
+						selectedFileName = (String) comboBoxTheirFiles.getSelectedItem();
+						
+						selectedFilePath = sharedFromCurrentPath + selectedFileName;
+						String selectedUser = (String) comboBoxSharedFrom.getSelectedItem();
+						
+						if (selectedFilePath.equals("Select user") || 
+							selectedFilePath.equals("No files")) 
+						{
+							return;
+						}
+						
+						
+						if (selectedFilePath.endsWith("/...")) {
+							System.out.println("vracaj nazad");
+							
+							
+							selectedFilePath = selectedFilePath.substring(0, selectedFilePath.lastIndexOf("/"));
+							if (selectedFilePath.contains("/")) { // Go back one folder
+								
+								selectedFilePath = selectedFilePath.substring(0, selectedFilePath.lastIndexOf("/"));
+								sharedFromCurrentPath = selectedFilePath.substring(0, selectedFilePath.lastIndexOf("/")+1);
+							
+								selectedFileName = selectedFilePath.substring(selectedFilePath.lastIndexOf("/")+1);
+							}
+							else { // GO BACK TO root folder
+								selectedFilePath = null;
+								sharedFromCurrentPath = "";
+								
+								
+								String[] listOfFiles = getFilesFromServer(selectedUser);
+								
+								if (listOfFiles[0].equals("") == false) {
+									comboBoxTheirFiles.setEnabled(true);
+									comboBoxTheirFiles.setModel(new DefaultComboBoxModel(listOfFiles));
+								}
+								else {
+									comboBoxTheirFiles.setEnabled(false);
+									comboBoxTheirFiles.setModel(new DefaultComboBoxModel(new String[] {"No files"}));
+								}
+								
+								lblSelectedFile.setText("Selected file: ");
+								lblTheirFiles.setText("Selected folder: root");
+								textArea.setText("");
+								selectedFileName = null;
+								
+								return;
+							}
+							
+						
+						}
+						
+						// Request a file from server
+						toServerStream.println(FILE_FROM_USER_REQUEST);
+						toServerStream.println(selectedFilePath);
+						toServerStream.println(selectedUser);
+						
+						System.out.println("REQUESTED: " + selectedFilePath);
+						
+						
+						// Check if its a directory
+						serverMsg = fromServerStream.readLine();
+						if (serverMsg.equals(ITS_DIRECTORY)) {
+							System.out.println("its directoryyyyyyyyy");
+							
+							// check if its empty or not
+							serverMsg = fromServerStream.readLine();
+							if (serverMsg.equals(SUCCESS_MSG)) {
+								
+								String filesInFolderSemic = fromServerStream.readLine();
+								System.out.println(filesInFolderSemic);
+								
+								String[] filesInFolderArr = filesInFolderSemic.split(";");
+								comboBoxTheirFiles.setModel(new DefaultComboBoxModel(filesInFolderArr));
+								comboBoxTheirFiles.insertItemAt("...", 0);
+								
+								lblSelectedFile.setText("Selected file: ");
+								lblTheirFiles.setText("Selected folder: " + selectedFileName);
+								textArea.setText("");
+								
+								sharedFromCurrentPath = sharedFromCurrentPath + selectedFileName + "/";
+								selectedFileName = null;
+							}
+							else { // DIR IS EMPTY
+								
+								comboBoxTheirFiles.setModel(new DefaultComboBoxModel(new String[] {"..."}));
+								
+								lblSelectedFile.setText("Selected file: ");
+								lblTheirFiles.setText("Selected folder: " + selectedFileName);
+								textArea.setText("");
+								
+								sharedFromCurrentPath = sharedFromCurrentPath + selectedFileName + "/";
+								selectedFileName = null;
+								
+							}
+							
+							
+						}
+						else {
 							// Get file from server
-							requestedFileText = "";
+							String requestedFileText = "";
 							String oneLine;
 							
 							while (true) {
@@ -386,138 +1177,103 @@ public class Client extends JFrame {
 							}
 							
 							textArea.setText(requestedFileText);
-							
+							lblSelectedFile.setText("You selected: " + selectedFileName + "  From: " + selectedUser);
 							
 						}
-						catch (Exception e) {
-							System.out.println("SERVER IS DOWN");
-							
-							JOptionPane.showMessageDialog(
-									Client.this,
-									"Server stopped working", 
-									"Error",
-									JOptionPane.ERROR_MESSAGE);
-							
-							dispose();
-						}
-					}
-				});
-			}
-			return comboBoxYourFiles;
-		}
-	
-	// UPLOAD BTN ACTION
-	private JButton getBtnUpload() {
-		if (btnUpload == null) {
-			btnUpload = new JButton("Upload!");
-			btnUpload.addActionListener(new ActionListener() {
-				public void actionPerformed(ActionEvent arg0) {
-					String filePath = textFilePath.getText();
-					
-					if (filePath.equals("")) {
-						JOptionPane.showMessageDialog(
-								Client.this,
-								"Please eneter file path", 
-								"Error",
-								JOptionPane.ERROR_MESSAGE);
-						return;
-					}
-					
-					String fileText;
-					try {
-						fileText = FileConvertor.readFile(filePath);
+						
+						
 					}
 					catch (Exception e) {
+						System.out.println("SERVER IS DOWN");
+						
 						JOptionPane.showMessageDialog(
 								Client.this,
-								"That file doesnt exist!", 
+								"Server stopped working", 
 								"Error",
 								JOptionPane.ERROR_MESSAGE);
+						
+						dispose();
+					}
+				}
+			});
+		
+			
+		}
+		return comboBoxTheirFiles;
+	}
+	
+	// BTN DOWNLOAD
+	private JButton getBtnDownload() {
+		if (btnDownload == null) {
+			btnDownload = new JButton("Download");
+			btnDownload.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent arg0) {
+					if (selectedFileName == null) {
+						JOptionPane.showMessageDialog(
+								Client.this,
+								"Select a file!", 
+								"Error",
+								JOptionPane.ERROR_MESSAGE);
+						
 						return;
 					}
 					
+					String selectedFileText = textArea.getText().trim();					
+					String fileDirectory = "";
 					
-//					if (currentFiles != null && currentFiles.length == 5) {
-//						JOptionPane.showMessageDialog(
-//								Client.this,
-//								"You have 5 files, you can't upload more", 
-//								"Error",
-//								JOptionPane.ERROR_MESSAGE);
-//						return;
-//					}
-					
-					if (currentUser.getFiles().size() == 5) {
-						JOptionPane.showMessageDialog(
-								Client.this,
-								"You have 5 files, you can't upload more", 
-								"Error",
-								JOptionPane.ERROR_MESSAGE);
-						return;
-					}
-					
-					
-					String fileName = filePath.substring(filePath.lastIndexOf("/")+1);
-					
-					
-					
-					// SEND UPLOAD REQUEST
-					toServerStream.println(UPLOAD_REQUEST);
-					System.out.println("i wanna UPLOAD!!!");
-					System.out.println(fileName);
-					
-					// SEND FILE NAME
-					toServerStream.println(fileName);
-					
-					// SEND FILE TEXT
-					toServerStream.println(fileText);
-					toServerStream.println(SUCCESS_MSG);
-					
-					// UPDATE currentUser files
-//					if (currentFiles != null) {
-//						String[] newCurrentFiles = Arrays.copyOf(currentFiles, currentFiles.length+1);
-//						newCurrentFiles[newCurrentFiles.length-1] = fileName;
-//						
-//						currentFiles = newCurrentFiles;
-//						
-//						// UPDATE COMBO BOX
-//						comboBox.addItem(fileName);
-//					}
-//					else {
-//						currentFiles = new String[1];
-//						currentFiles[0] = fileName;
-//						
-//						// UPDATE COMBO BOX
-//						comboBox.insertItemAt(fileName, 0);
-//						comboBox.removeItemAt(1);
-//					}
-					if (currentUser.getFiles().isEmpty() == false) {
-						
-						currentUser.getFiles().add(fileName);
-						
-						// UPDATE COMBO BOX
-						comboBoxYourFiles.addItem(fileName);
-					}
-					else {
-						currentUser.getFiles().add(fileName);
-						
-						// UPDATE COMBO BOX
-						comboBoxYourFiles.insertItemAt(fileName, 0);
-						comboBoxYourFiles.removeItemAt(1);
-					}
-					
-					
+			
+					JFileChooser j = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory()); 
+		            j.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+		            int choice = j.showDialog(Client.this, "Download");
+		            
+		            
+		            if (choice == JFileChooser.APPROVE_OPTION) { 
+		            	fileDirectory = j.getSelectedFile().getAbsolutePath() + "/";
+		            }
+		            else {
+		            	return;
+		            }
+		            
+					FileConvertor.textToFile(selectedFileText, fileDirectory+selectedFileName);
+					System.out.println();
 					
 					JOptionPane.showMessageDialog(
 							Client.this,
-							"File uploaded successfully!", 
+							"File dowloaded!", 
 							"Success",
 							JOptionPane.INFORMATION_MESSAGE);
+				}
+			});
+			btnDownload.setBounds(295, 346, 100, 23);
+		}
+		return btnDownload;
+	}
+	
+	// BTN CHOOSE FILE PATH
+	private JButton getBtnChoseFile() {
+		if (btnChoseFile == null) {
+			btnChoseFile = new JButton("Chose file");
+			btnChoseFile.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent arg0) {
+					
+					
+					JFileChooser j = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory()); 
+		            j.setFileSelectionMode(JFileChooser.FILES_ONLY);
+		            int choice = j.showDialog(Client.this, "Choose");
+		            
+		            
+		            if (choice == JFileChooser.APPROVE_OPTION) { 
+		            	textFilePath.setText(j.getSelectedFile().getAbsolutePath());
+		            }
+		            else {
+		            	return;
+		            }
 					
 				}
 			});
-			btnUpload.setBounds(10, 346, 89, 23);
+			btnChoseFile.setBounds(151, 314, 100, 23);
 		}
-		return btnUpload;
+		return btnChoseFile;
 	}
 	////////////////////////////////////
 	
@@ -542,7 +1298,7 @@ public class Client extends JFrame {
 		return registerContentPane;
 	}
 	
-	// REGISTER BUTTON
+	// BTN REGISTER 
 	private JButton getBtnRegister() {
 		if (btnRegister == null) {
 			btnRegister = new JButton("Register!");
@@ -699,248 +1455,22 @@ public class Client extends JFrame {
 		}
 		return lblNoAccount;
 	}
-	
-	// App items
-	private JComboBox getComboBoxYourFilesTEST() {
-		if (comboBoxYourFiles == null) {
-			comboBoxYourFiles = new JComboBox();
-			comboBoxYourFiles.setModel(new DefaultComboBoxModel(new String[] {"test1", "test2", "test3"}));
-			comboBoxYourFiles.setToolTipText("");
-			comboBoxYourFiles.setBounds(10, 85, 96, 20);
+	private JTextField getTextShareLink() {
+		if (textShareLink == null) {
+			textShareLink = new JTextField();
+			textShareLink.setBounds(243, 301, 89, 20);
+			textShareLink.setColumns(10);
 		}
-		return comboBoxYourFiles;
+		return textShareLink;
 	}
-	private JLabel getLblWelcome() {
-		if (lblWelcome == null) {
-			lblWelcome = new JLabel("Welcome "+ currentUser.getUsername());
-			lblWelcome.setFont(new Font("Tahoma", Font.PLAIN, 16));
-			lblWelcome.setBounds(10, 11, 202, 14);
+	private JLabel getLblUseShareLink() {
+		if (lblUseShareLink == null) {
+			lblUseShareLink = new JLabel("Use share link");
+			lblUseShareLink.setHorizontalAlignment(SwingConstants.CENTER);
+			lblUseShareLink.setBounds(10, 276, 550, 14);
 		}
-		return lblWelcome;
+		return lblUseShareLink;
 	}
-	private JLabel getLblYourFiles() {
-		if (lblYourFiles == null) {
-			lblYourFiles = new JLabel("Your files");
-			lblYourFiles.setBounds(10, 62, 69, 14);
-		}
-		return lblYourFiles;
-	}
-	private JTextArea getTextArea() {
-		if (textArea == null) {
-			textArea = new JTextArea();
-			textArea.setEditable(false);
-			textArea.setBounds(327, 87, 233, 248);
-		}
-		return textArea;
-	}
-	private JLabel getLblSelectedFile() {
-		if (lblSelectedFile == null) {
-			lblSelectedFile = new JLabel("Selected file:");
-			lblSelectedFile.setBounds(327, 62, 233, 14);
-		}
-		return lblSelectedFile;
-	}
-	private JLabel getLblUploadANew() {
-		if (lblUploadANew == null) {
-			lblUploadANew = new JLabel("Upload a new file");
-			lblUploadANew.setBounds(10, 265, 134, 14);
-		}
-		return lblUploadANew;
-	}
-	private JLabel getLblEnterFilePath() {
-		if (lblEnterFilePath == null) {
-			lblEnterFilePath = new JLabel("Enter file path:");
-			lblEnterFilePath.setBounds(10, 290, 134, 14);
-		}
-		return lblEnterFilePath;
-	}
-	private JTextField getTextFilePath() {
-		if (textFilePath == null) {
-			textFilePath = new JTextField();
-			textFilePath.setBounds(10, 315, 134, 20);
-			textFilePath.setColumns(10);
-		}
-		return textFilePath;
-	}
-	private JButton getBtnLogOut() {
-		if (btnLogOut == null) {
-			btnLogOut = new JButton("Log out");
-			btnLogOut.addActionListener(new ActionListener() {
-				public void actionPerformed(ActionEvent e) {
-					try {
-						
-						toServerStream.println(LOGOUT_REQUEST);
-						
-						// Restart vars
-						currentUser = new User();
-						itsVisit = false;
-
-						lblWelcome = null;
-						comboBoxYourFiles = null;
-						comboBoxWhoShared = null;
-						comboBoxTheirFiles = null;
-						comboBoxSharedTo = null;
-						textArea = null;
-						textFilePath = null;
-						textShareTo = null;
-						textLink = null;
-						btnLink = null;
-						
-						appContentPane = null;
-						
-						textUsername = null;
-						textPassword = null;
-						textShareLink = null;
-						
-						logInContentPane = null;
-						
-						textRegUsername = null;
-						textRegPassword = null;
-						
-						registerContentPane = null;
-						
-						// CHANGE CONTENT PANE
-						Client.this.setContentPane(getLogInContentPane());
-						Client.this.validate();
-					}
-					catch (Exception ex) {
-						// TODO: handle exception
-					}
-					
-				}
-			});
-			btnLogOut.setBounds(471, 346, 89, 23);
-		}
-		return btnLogOut;
-	}
-	private JTextField getTextLink() {
-		if (textLink == null) {
-			textLink = new JTextField();
-			
-			if (currentUser.isLinkOn()) {
-				textLink.setText(currentUser.getLink());
-			}
-			
-			textLink.setEditable(false);
-			textLink.setBounds(327, 31, 141, 20);
-			textLink.setColumns(10);
-		}
-		return textLink;
-	}
-	private JButton getBtnLink() {
-		if (btnLink == null) {
-			
-			btnLink = new JButton("TEXT");
-			
-			if (currentUser.isLinkOn()) {
-				btnLink.setText("Link ON");
-			}
-			else {
-				btnLink.setText("Link OFF");
-			}
-			
-			
-			btnLink.addActionListener(new ActionListener() {
-				public void actionPerformed(ActionEvent arg0) {
-					toServerStream.println(LINKONCHANGE_REQUEST);
-					
-					// TURN OFF
-					if (btnLink.getText().equals("Link ON")) {
-						textLink.setText("");
-						
-						btnLink.setText("Link OFF");
-						
-						
-						
-					} // TURN ON
-					else if (btnLink.getText().equals("Link OFF")) {
-						textLink.setText(currentUser.getLink());
-						
-						btnLink.setText("Link ON");
-						
-					}
-					
-				}
-			});
-			btnLink.setBounds(471, 28, 89, 23);
-		}
-		return btnLink;
-	}
-	private JLabel getLblLinkForSharing() {
-		if (lblLinkForSharing == null) {
-			lblLinkForSharing = new JLabel("Link for sharing");
-			lblLinkForSharing.setBounds(327, 13, 233, 14);
-		}
-		return lblLinkForSharing;
-	}
-	private JButton getBtnDownload() {
-		if (btnDownload == null) {
-			btnDownload = new JButton("Download");
-			btnDownload.setBounds(327, 346, 100, 23);
-		}
-		return btnDownload;
-	}
-	private JLabel getLblWhoSharedWith() {
-		if (lblWhoSharedWith == null) {
-			lblWhoSharedWith = new JLabel("Who shared with you");
-			lblWhoSharedWith.setBounds(10, 127, 121, 14);
-		}
-		return lblWhoSharedWith;
-	}
-	private JComboBox getComboBoxWhoShared() {
-		if (comboBoxWhoShared == null) {
-			comboBoxWhoShared = new JComboBox();
-			comboBoxWhoShared.setToolTipText("");
-			comboBoxWhoShared.setBounds(10, 150, 96, 20);
-		}
-		return comboBoxWhoShared;
-	}
-	private JLabel getLblShareWith() {
-		if (lblShareWith == null) {
-			lblShareWith = new JLabel("Share to");
-			lblShareWith.setBounds(10, 198, 69, 14);
-		}
-		return lblShareWith;
-	}
-	private JComboBox getComboBoxSharedTo() {
-		if (comboBoxSharedTo == null) {
-			comboBoxSharedTo = new JComboBox();
-			comboBoxSharedTo.setToolTipText("");
-			comboBoxSharedTo.setBounds(144, 223, 96, 20);
-		}
-		return comboBoxSharedTo;
-	}
-	private JComboBox getComboBoxTheirFiles() {
-		if (comboBoxTheirFiles == null) {
-			comboBoxTheirFiles = new JComboBox();
-			comboBoxTheirFiles.setToolTipText("");
-			comboBoxTheirFiles.setBounds(144, 150, 96, 20);
-		}
-		return comboBoxTheirFiles;
-	}
-	private JLabel getLblTheirFiles() {
-		if (lblTheirFiles == null) {
-			lblTheirFiles = new JLabel("Their files");
-			lblTheirFiles.setBounds(144, 127, 121, 14);
-		}
-		return lblTheirFiles;
-	}
-	private JLabel getLblYouSharedTo() {
-		if (lblYouSharedTo == null) {
-			lblYouSharedTo = new JLabel("You shared to");
-			lblYouSharedTo.setBounds(144, 198, 96, 14);
-		}
-		return lblYouSharedTo;
-	}
-	private JTextField getTextShareTo() {
-		if (textShareTo == null) {
-			textShareTo = new JTextField();
-			textShareTo.setColumns(10);
-			textShareTo.setBounds(10, 223, 121, 20);
-		}
-		return textShareTo;
-	}
-
 	
 	
 	// Register items
@@ -996,68 +1526,145 @@ public class Client extends JFrame {
 	}
 	
 	
-
-	private JTextField getTextShareLink() {
-		if (textShareLink == null) {
-			textShareLink = new JTextField();
-			textShareLink.setBounds(243, 301, 89, 20);
-			textShareLink.setColumns(10);
+	// App items
+	private JComboBox getComboBoxYourFilesTEST() {
+		if (comboBoxYourFiles == null) {
+			comboBoxYourFiles = new JComboBox();
+			comboBoxYourFiles.setModel(new DefaultComboBoxModel(new String[] {"test1", "test2", "test3"}));
+			comboBoxYourFiles.setToolTipText("");
+			comboBoxYourFiles.setBounds(10, 70, 96, 20);
 		}
-		return textShareLink;
+		return comboBoxYourFiles;
 	}
-	private JLabel getLblUseShareLink() {
-		if (lblUseShareLink == null) {
-			lblUseShareLink = new JLabel("Use share link");
-			lblUseShareLink.setHorizontalAlignment(SwingConstants.CENTER);
-			lblUseShareLink.setBounds(10, 276, 550, 14);
+	private JLabel getLblWelcome() {
+		if (lblWelcome == null) {
+			lblWelcome = new JLabel("Welcome "+ currentUser.getUsername());
+			lblWelcome.setFont(new Font("Tahoma", Font.PLAIN, 16));
+			lblWelcome.setBounds(10, 11, 202, 14);
 		}
-		return lblUseShareLink;
+		return lblWelcome;
 	}
-	private JButton getBtnVisit() {
-		if (btnVisit == null) {
-			btnVisit = new JButton("Visit");
-			btnVisit.addActionListener(new ActionListener() {
-				public void actionPerformed(ActionEvent e) {
-					try {
-						String shareLink = textShareLink.getText();
-						
-						toServerStream.println(GETUSER_BY_SHARELINK);
-						
-						toServerStream.println(shareLink);
-						
-						serverMsg = fromServerStream.readLine();
-						
-						if (serverMsg.equals(SUCCESS_MSG)) {
-							
-							currentUser = (User) objectFromServerStream.readObject();
-							itsVisit = true;
-							
-							// CHANGE CONTENT PANE
-							Client.this.setContentPane(getAppContentPane());
-							Client.this.validate();
-						}
-						else {
-							JOptionPane.showMessageDialog(
-									Client.this,
-									"That share link is not available", 
-									"Error",
-									JOptionPane.ERROR_MESSAGE);
-						}
-						
-					}
-					catch (Exception ex) {
-						JOptionPane.showMessageDialog(
-								Client.this,
-								"Server stopped working", 
-								"Error",
-								JOptionPane.ERROR_MESSAGE);
-						
-						dispose();
-					}
-				}
-			});
-			btnVisit.setBounds(243, 335, 89, 23);
+	private JLabel getLblYourFiles() {
+		if (lblYourFiles == null) {
+			lblYourFiles = new JLabel("Your files");
+			lblYourFiles.setFont(new Font("Tahoma", Font.PLAIN, 14));
+			lblYourFiles.setBounds(10, 47, 275, 14);
+			
+			if (currentUser.isPremium()) {
+				lblYourFiles.setText("Selected folder: root");
+			}
 		}
-		return btnVisit;
+		return lblYourFiles;
+	}
+	private JTextArea getTextArea() {
+		if (textArea == null) {
+			textArea = new JTextArea();
+			textArea.setEditable(false);
+		}
+		return textArea;
+	}
+	private JLabel getLblSelectedFile() {
+		if (lblSelectedFile == null) {
+			lblSelectedFile = new JLabel("Selected file:");
+			lblSelectedFile.setBounds(295, 62, 265, 14);
+		}
+		return lblSelectedFile;
+	}
+	private JLabel getLblUploadANew() {
+		if (lblUploadANew == null) {
+			lblUploadANew = new JLabel("Upload a new file");
+			lblUploadANew.setFont(new Font("Tahoma", Font.PLAIN, 14));
+			lblUploadANew.setBounds(10, 268, 134, 20);
+		}
+		return lblUploadANew;
+	}
+	private JLabel getLblEnterFilePath() {
+		if (lblEnterFilePath == null) {
+			lblEnterFilePath = new JLabel("Enter file path:");
+			lblEnterFilePath.setBounds(10, 290, 134, 14);
+		}
+		return lblEnterFilePath;
+	}
+	private JTextField getTextFilePath() {
+		if (textFilePath == null) {
+			textFilePath = new JTextField();
+			textFilePath.setBounds(10, 315, 134, 20);
+			textFilePath.setColumns(10);
+		}
+		return textFilePath;
+	}
+	private JTextField getTextLink() {
+		if (textLink == null) {
+			textLink = new JTextField();
+			
+			if (currentUser.isLinkOn()) {
+				textLink.setText(currentUser.getLink());
+			}
+			
+			textLink.setEditable(false);
+			textLink.setBounds(295, 31, 173, 20);
+			textLink.setColumns(10);
+		}
+		return textLink;
+	}
+	private JLabel getLblLinkForSharing() {
+		if (lblLinkForSharing == null) {
+			lblLinkForSharing = new JLabel("Link for sharing");
+			lblLinkForSharing.setBounds(295, 13, 265, 14);
+		}
+		return lblLinkForSharing;
+	}
+	private JLabel getLblWhoSharedWith() {
+		if (lblWhoSharedWith == null) {
+			lblWhoSharedWith = new JLabel("Who shared to you");
+			lblWhoSharedWith.setBounds(10, 105, 121, 14);
+		}
+		return lblWhoSharedWith;
+	}
+	private JLabel getLblShareWith() {
+		if (lblShareWith == null) {
+			lblShareWith = new JLabel("Share to");
+			lblShareWith.setBounds(10, 163, 69, 14);
+		}
+		return lblShareWith;
+	}
+	private JLabel getLblTheirFiles() {
+		if (lblTheirFiles == null) {
+			lblTheirFiles = new JLabel("Selected folder: root");
+			lblTheirFiles.setBounds(144, 105, 141, 14);
+		}
+		return lblTheirFiles;
+	}
+	private JLabel getLblYouSharedTo() {
+		if (lblYouSharedTo == null) {
+			lblYouSharedTo = new JLabel("You shared to");
+			lblYouSharedTo.setBounds(144, 163, 96, 14);
+		}
+		return lblYouSharedTo;
+	}
+	private JTextField getTextShareTo() {
+		if (textShareTo == null) {
+			textShareTo = new JTextField();
+			textShareTo.setColumns(10);
+			textShareTo.setBounds(10, 188, 121, 20);
+		}
+		return textShareTo;
+	}
+	private JScrollPane getScrollPane() {
+		if (scrollPane == null) {
+			scrollPane = new JScrollPane();
+			scrollPane.setBounds(295, 87, 265, 248);
+			scrollPane.setViewportView(getTextArea());
+		}
+		return scrollPane;
+	}
+	private JLabel getLblPremium() {
+		if (lblPremium == null) {
+			lblPremium = new JLabel("PREMIUM");
+			lblPremium.setHorizontalAlignment(SwingConstants.CENTER);
+			lblPremium.setBorder(new LineBorder(Color.RED, 2, true));
+			lblPremium.setBounds(197, 13, 68, 14);
+		}
+		return lblPremium;
 	}
 }

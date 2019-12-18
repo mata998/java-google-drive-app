@@ -125,5 +125,19 @@ public class Server {
 		return null;
 	}
 	
+	public static String getFilesFromUserSemiCol(String targetUsername) {
+		
+		for (User user : listOfUsers) {
+			if (user.getUsername().equals(targetUsername)) {
+				
+				return user.getFilesSemiColon();
+			}
+			
+		}
+		
+		return null;
+	}
+	
+	
 	
 }
