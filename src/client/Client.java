@@ -3,6 +3,7 @@ package client;
 import java.awt.BorderLayout;
 import java.awt.EventQueue;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
@@ -88,6 +89,11 @@ public class Client extends JFrame {
 	static final String SHARE_TO_REQUEST = "***share_to";
 	static final String GETFILES_USER_REQUEST = "***getfilesuser";
 	static final String FILE_FROM_USER_REQUEST = " ***filefromuser";
+	static final String CREATE_FOLDER_REQUEST = "***createfolder";
+	static final String DELETE_FOLDER_REQUEST = "***deletefolder";
+	static final String RENAME_FOLDER_REQUEST = "***renamefolder";
+	static final String MOVE_FILE_REQUEST = "***movefile";
+	static final String FILES_IN_FOLDER = "***filesinfolder";
 	Socket connectionSocket = null;
 	BufferedReader fromServerStream = null;
 	PrintStream toServerStream = null;
@@ -121,6 +127,10 @@ public class Client extends JFrame {
 	private JButton btnChoseFile;
 	private JScrollPane scrollPane;
 	private JLabel lblPremium;
+	private JButton btnCreate;
+	private JButton btnDelete;
+	private JButton btnRename;
+	private JButton btnMove;
 	/////
 	
 	
@@ -148,7 +158,7 @@ public class Client extends JFrame {
 	// THIS IS MAIN REALLY
 	public Client() {
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(430, 200, 586, 418);
+		setBounds(370, 135, 587, 482);
 
 		try {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
@@ -246,11 +256,13 @@ public class Client extends JFrame {
 						
 						// LOG IN SUCCESSFUL ----------
 						if (serverMsg.equals(SUCCESS_MSG)) {
-							System.out.println("YAY");
-
+							System.out.println("\nYAY");
+							
+							System.out.println("Waiting for obj");
 							// Get User object
 							currentUser = (User) objectFromServerStream.readObject();
 							
+							System.out.println("Got object");
 							currentUser.showAll();
 							
 							// CHANGE CONTENT PANE
@@ -269,6 +281,7 @@ public class Client extends JFrame {
 						
 						
 					} catch (Exception e) {
+						e.printStackTrace();
 						JOptionPane.showMessageDialog(
 								Client.this,
 								"Server stopped working", 
@@ -315,7 +328,7 @@ public class Client extends JFrame {
 						toServerStream.println(GETUSER_BY_SHARELINK);
 						
 						// Ask for user
-						System.out.println("Visit " + shareLink);
+						System.out.println("\nVisit " + shareLink);
 						toServerStream.println(shareLink);
 						
 						
@@ -323,9 +336,14 @@ public class Client extends JFrame {
 						serverMsg = fromServerStream.readLine();
 						
 						if (serverMsg.equals(SUCCESS_MSG)) {
+							System.out.println("User found, w8ing for obj");
 							
+							// ?????????????????????????????????
 							currentUser = (User) objectFromServerStream.readObject();
 							itsVisit = true;
+							
+						
+							System.out.println("Got obj");
 							
 							// CHANGE CONTENT PANE
 							Client.this.setContentPane(getAppContentPane());
@@ -377,24 +395,31 @@ public class Client extends JFrame {
 			appContentPane.add(getBtnLink());
 			appContentPane.add(getLblLinkForSharing());
 			appContentPane.add(getBtnDownload());
-			
-			// new stuff
 			appContentPane.add(getLblWhoSharedWith());
 			appContentPane.add(getLblShareWith());
-			appContentPane.add(getComboBoxTheirFiles());
 			appContentPane.add(getLblTheirFiles());
 			appContentPane.add(getLblYouSharedTo());
 			appContentPane.add(getTextShareTo());
 			appContentPane.add(getBtnShareTo());
 			appContentPane.add(getBtnChoseFile());
+			appContentPane.add(getComboBoxTheirFiles());
+			
+			
+			// Combobox tests
+//			appContentPane.add(getComboBoxYourFilesTEST());
+//			appContentPane.add(getComboBoxSharedFromTEST());
+//			appContentPane.add(getComboBoxSharedToTEST());
+			
 			
 			if (currentUser.isPremium()) {
 				appContentPane.add(getLblPremium());
+				appContentPane.add(getBtnCreate());
+				appContentPane.add(getBtnDelete());
+				appContentPane.add(getBtnRename());
+				appContentPane.add(getBtnMove());
 			}
 			
-//			appContentPane.add(getComboBoxYourFilesTEST());
-			
-						
+			// combobox yourfiles
 			if (currentUser.getFiles().isEmpty() == false) {
 				appContentPane.add(getComboBoxYourFiles(currentUser.getFilesStringArr()));	
 			}
@@ -402,7 +427,7 @@ public class Client extends JFrame {
 				appContentPane.add(getComboBoxYourFiles(new String[] {"No files"}));
 			}
 			
-			
+			// combobox sharedTO
 			if (currentUser.getSharedTo().isEmpty() == false) {
 				appContentPane.add(getComboBoxSharedTo(currentUser.getSharedToUsersStringArr()));
 			}
@@ -410,7 +435,7 @@ public class Client extends JFrame {
 				appContentPane.add(getComboBoxSharedTo(new String[] {"No users"}));
 			}
 			
-			
+			// combobox sharedFROM
 			if (currentUser.getSharedFrom().isEmpty() == false) {
 				appContentPane.add(getComboBoxSharedFrom(currentUser.getSharedFromUsersStringArr()));
 			}
@@ -423,7 +448,6 @@ public class Client extends JFrame {
 			// REMOVE things that visiters cant do
 			if (itsVisit) {
 				lblWelcome.setText("Welcome to " + currentUser.getUsername() + "'s drive");
-				lblYourFiles.setText("Files");
 				lblWhoSharedWith.setText("Who shared to them");
 				appContentPane.remove(lblLinkForSharing);
 				appContentPane.remove(btnLink);
@@ -703,7 +727,7 @@ public class Client extends JFrame {
 					}
 				}
 			});
-			btnUpload.setBounds(10, 346, 89, 23);
+			btnUpload.setBounds(10, 410, 89, 23);
 		}
 		return btnUpload;
 	}
@@ -727,6 +751,8 @@ public class Client extends JFrame {
 						}
 						
 						toServerStream.println(LOGOUT_REQUEST);
+						
+						
 						
 						// Restart vars
 						currentUser = new User();
@@ -753,6 +779,10 @@ public class Client extends JFrame {
 						textShareTo = null;
 						textLink = null;
 						btnLink = null;
+						btnCreate = null;
+						btnDelete = null;
+						btnRename = null;
+						btnMove = null;
 						
 						
 						
@@ -780,7 +810,7 @@ public class Client extends JFrame {
 					
 				}
 			});
-			btnLogOut.setBounds(471, 346, 89, 23);
+			btnLogOut.setBounds(471, 410, 89, 23);
 		}
 		return btnLogOut;
 	}
@@ -946,7 +976,7 @@ public class Client extends JFrame {
 					}
 				}
 			});
-			btnShareTo.setBounds(10, 219, 89, 23);
+			btnShareTo.setBounds(10, 283, 89, 23);
 		}
 		return btnShareTo;
 	}
@@ -957,7 +987,7 @@ public class Client extends JFrame {
 			comboBoxSharedTo = new JComboBox();
 			comboBoxSharedTo.setModel(new DefaultComboBoxModel(listOfItems));
 			comboBoxSharedTo.setToolTipText("");
-			comboBoxSharedTo.setBounds(144, 188, 96, 20);
+			comboBoxSharedTo.setBounds(144, 252, 96, 20);
 		
 		
 			comboBoxSharedTo.addActionListener(new ActionListener() {
@@ -977,7 +1007,7 @@ public class Client extends JFrame {
 			comboBoxSharedFrom = new JComboBox();
 			comboBoxSharedFrom.setModel(new DefaultComboBoxModel(listOfItems));
 			comboBoxSharedFrom.setToolTipText("");
-			comboBoxSharedFrom.setBounds(10, 128, 121, 20);
+			comboBoxSharedFrom.setBounds(10, 192, 121, 20);
 		
 			comboBoxSharedFrom.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent arg0) {
@@ -1058,7 +1088,7 @@ public class Client extends JFrame {
 			comboBoxTheirFiles.setEnabled(false);
 			comboBoxTheirFiles.setModel(new DefaultComboBoxModel(new String[] {"Select user"}));
 			comboBoxTheirFiles.setToolTipText("");
-			comboBoxTheirFiles.setBounds(144, 128, 96, 20);
+			comboBoxTheirFiles.setBounds(144, 192, 96, 20);
 			
 			comboBoxTheirFiles.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent arg0) {
@@ -1244,7 +1274,7 @@ public class Client extends JFrame {
 							JOptionPane.INFORMATION_MESSAGE);
 				}
 			});
-			btnDownload.setBounds(295, 346, 100, 23);
+			btnDownload.setBounds(295, 410, 100, 23);
 		}
 		return btnDownload;
 	}
@@ -1271,9 +1301,409 @@ public class Client extends JFrame {
 					
 				}
 			});
-			btnChoseFile.setBounds(151, 314, 100, 23);
+			btnChoseFile.setBounds(151, 378, 100, 23);
 		}
 		return btnChoseFile;
+	}
+	
+	// BTN CREATE
+	private JButton getBtnCreate() {
+		if (btnCreate == null) {
+			btnCreate = new JButton("Create");
+			btnCreate.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent arg0) {
+					
+					CreateFolder createFolderJDialog = new CreateFolder(Client.this);
+					createFolderJDialog.setVisible(true);
+					
+				}
+			});
+			btnCreate.setBounds(10, 101, 89, 23);
+		}
+		return btnCreate;
+	}
+	
+	public void createFolder(String newFolderName) {
+		try {
+			System.out.println("Current path:" + currentPath);
+			System.out.println("Create this: " + newFolderName);
+			
+			toServerStream.println(CREATE_FOLDER_REQUEST);
+			
+			// Send new folder path
+			toServerStream.println(currentPath + newFolderName);
+			
+			// Server checks if it exists or not
+			serverMsg = fromServerStream.readLine();
+			if (serverMsg.equals(SUCCESS_MSG)) {
+				
+				
+				// check if it is made
+				serverMsg = fromServerStream.readLine();
+				if (serverMsg.equals(SUCCESS_MSG)) {
+					
+					JOptionPane.showMessageDialog(
+							Client.this,
+							"Folder made successfully!", 
+							"Success",
+							JOptionPane.INFORMATION_MESSAGE);
+					
+					
+					
+					// Show it in combobox
+					comboBoxYourFiles.addItem(newFolderName);
+					
+					// If its root dir, update currentUser files
+					if (currentPath.equals("")) {
+						
+						currentUser.addFile(newFolderName);
+						
+					}
+				}
+				else {
+					
+					JOptionPane.showMessageDialog(
+							Client.this,
+							"Server could not make that folder", 
+							"Error",
+							JOptionPane.ERROR_MESSAGE);
+					
+				}
+				
+				
+				
+			}
+			else { // THAT EXISTS
+				JOptionPane.showMessageDialog(
+						Client.this,
+						"That folder already exists", 
+						"Error",
+						JOptionPane.ERROR_MESSAGE);
+			}
+			
+			
+		} catch (Exception e) {
+			System.out.println("SERVER IS DOWN");
+			
+			JOptionPane.showMessageDialog(
+					Client.this,
+					"Server stopped working", 
+					"Error",
+					JOptionPane.ERROR_MESSAGE);
+			
+			dispose();
+		}
+	}
+	
+	// BTN DELETE
+	private JButton getBtnDelete() {
+		if (btnDelete == null) {
+			btnDelete = new JButton("Delete");
+			btnDelete.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent e) {
+					try {
+						
+						System.out.println("CURRENT PATH: " + currentPath);
+						
+						if (currentPath.equals("")) {
+							JOptionPane.showMessageDialog(
+									Client.this,
+									"Can't delete root folder", 
+									"Error",
+									JOptionPane.ERROR_MESSAGE);
+							return;
+						}
+						
+						if (comboBoxYourFiles.getItemAt(0).equals("...") &&
+							comboBoxYourFiles.getItemCount() == 1)
+						{
+							
+							int choice = JOptionPane.showConfirmDialog(
+									Client.this,
+									"You sure?",
+									"Delete", 
+									JOptionPane.YES_NO_OPTION);
+							
+							if ( choice != JOptionPane.YES_OPTION) {
+								return;
+							}
+							
+							System.out.println("you can delete this");
+							toServerStream.println(DELETE_FOLDER_REQUEST);
+							
+							// Send folder path to server
+							toServerStream.println(currentPath);
+							
+							
+							// check if its deleted successfully
+							serverMsg = fromServerStream.readLine();
+							
+							
+							// Successful delete
+							if (serverMsg.equals(SUCCESS_MSG)) {
+								JOptionPane.showMessageDialog(
+										Client.this,
+										"Successfull delete", 
+										"Error",
+										JOptionPane.INFORMATION_MESSAGE);
+								
+								
+								// if you delete file thats in the root
+								if (currentPath.indexOf("/") == currentPath.lastIndexOf("/")) {
+									
+									currentUser.removeFile(currentPath.substring(0,currentPath.length()-1));
+									
+									System.out.println("Remove: " + currentPath.substring(0,currentPath.length()));
+									
+									System.out.println("User after delete: ");
+									currentUser.showAll();
+									
+								}
+								
+								// go back to root dir
+								selectedFilePath = null;
+								currentPath = "";
+								
+								comboBoxYourFiles.setModel(new DefaultComboBoxModel(currentUser.getFilesStringArr()));
+								
+								lblSelectedFile.setText("Selected file: ");
+								lblYourFiles.setText("Selected folder: root");
+								textArea.setText("");
+								selectedFileName = null;
+								
+								
+							}
+							else {
+								JOptionPane.showMessageDialog(
+										Client.this,
+										"Server could not delete it", 
+										"Error",
+										JOptionPane.ERROR_MESSAGE);
+								return;
+							}
+							
+						}
+						else {
+							JOptionPane.showMessageDialog(
+									Client.this,
+									"Folder is not empty!", 
+									"Error",
+									JOptionPane.ERROR_MESSAGE);
+							return;
+						}
+					
+					}
+					catch (Exception ex) {
+						JOptionPane.showMessageDialog(
+								Client.this,
+								"Server stopped working", 
+								"Error",
+								JOptionPane.ERROR_MESSAGE);
+						
+						dispose();
+					}
+					
+				}
+			});
+			btnDelete.setBounds(109, 101, 89, 23);
+		}
+		return btnDelete;
+	}
+	
+	// BTN RENAME
+	private JButton getBtnRename() {
+		if (btnRename == null) {
+			btnRename = new JButton("Rename");
+			btnRename.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent e) {
+					
+					if (currentPath.equals("")) {
+						JOptionPane.showMessageDialog(
+								Client.this,
+								"Can't rename root folder", 
+								"Error",
+								JOptionPane.ERROR_MESSAGE);
+					}
+					else {
+						RenameFolder renameFolderJDialog = new RenameFolder(Client.this);
+						renameFolderJDialog.setVisible(true);
+					}
+					
+				}
+			});
+			btnRename.setBounds(10, 135, 89, 23);
+		}
+		return btnRename;
+	}
+
+	public void renameFolder(String newFolderName) {
+		try {
+			System.out.println("Current path: " + currentPath);
+			System.out.println("New folder name: " + newFolderName);
+			
+			String oldFolderName = currentPath.split("/")[currentPath.split("/").length-1];
+			System.out.println("Old folder name: " + oldFolderName);
+			
+			
+			toServerStream.println(RENAME_FOLDER_REQUEST);
+			
+			// send folder path
+			toServerStream.println(currentPath.substring(0, currentPath.length()-1));
+			
+			// send new name
+			toServerStream.println(newFolderName);
+			
+			
+			//check if it succeeded
+			serverMsg = fromServerStream.readLine();
+			if (serverMsg.equals(SUCCESS_MSG)) {
+				
+				// if you rename file thats in the root
+				if (currentPath.indexOf("/") == currentPath.lastIndexOf("/")) {
+					
+					currentUser.renameFile(oldFolderName, newFolderName);
+					
+					System.out.println("Rename: " + oldFolderName + " to " + newFolderName);
+					
+					System.out.println("User after rename: ");
+					currentUser.showAll();
+					
+				}
+				
+				
+				// go back to root dir
+				selectedFilePath = null;
+				currentPath = "";
+				
+				comboBoxYourFiles.setModel(new DefaultComboBoxModel(currentUser.getFilesStringArr()));
+				
+				lblSelectedFile.setText("Selected file: ");
+				lblYourFiles.setText("Selected folder: root");
+				textArea.setText("");
+				selectedFileName = null;
+				
+				
+				JOptionPane.showMessageDialog(
+						Client.this,
+						"Folder renamed successfully", 
+						"Success",
+						JOptionPane.INFORMATION_MESSAGE);
+			}
+			else {
+				JOptionPane.showMessageDialog(
+						Client.this,
+						"Server can't rename that folder", 
+						"Error",
+						JOptionPane.ERROR_MESSAGE);
+				
+			}
+			
+			
+		}
+		catch (Exception e) {
+//			e.printStackTrace();
+			
+			JOptionPane.showMessageDialog(
+					Client.this,
+					"Server stopped working", 
+					"Error",
+					JOptionPane.ERROR_MESSAGE);
+			
+			dispose();
+		}
+	}
+	
+	// BTN MOVE
+	private JButton getBtnMove() {
+			if (btnMove == null) {
+				btnMove = new JButton("Move");
+				btnMove.addActionListener(new ActionListener() {
+					public void actionPerformed(ActionEvent e) {
+						
+						if (selectedFileName == null) {
+							JOptionPane.showMessageDialog(
+									Client.this,
+									"Select a file!", 
+									"Error",
+									JOptionPane.ERROR_MESSAGE);
+							
+							return;
+						}
+						
+						System.out.println("File path: " + selectedFilePath);
+						System.out.println("Current folder: " + currentPath);
+						
+						
+						// get dirs in this folder
+						
+						String dirsHereSemic = dirsInFolder(currentPath);
+						
+						System.out.println("Dirsheresemic: " + dirsHereSemic);
+						
+						if (dirsHereSemic != null) {
+							
+//							MoveFile moveFileJDialog = new MoveFile(Client.this, dirsHereSemic.split(";"));
+							MoveFile moveFileJDialog = new MoveFile(Client.this, dirsHereSemic);
+							
+							moveFileJDialog.setVisible(true);
+							
+						}
+						else {
+							
+							MoveFile moveFileJDialog = new MoveFile(Client.this, null);            
+							moveFileJDialog.setVisible(true);
+							
+						}
+					
+					}
+				});
+				btnMove.setBounds(109, 135, 89, 23);
+			}
+			return btnMove;
+		}
+	
+	private String dirsInFolder(String folderPath) {
+		String dirsSemic;
+		
+		try {
+			toServerStream.println(FILES_IN_FOLDER);
+			
+			// send file path
+			toServerStream.println(folderPath);
+			
+			// check if it exists
+			serverMsg=fromServerStream.readLine();
+			if (serverMsg.equals(SUCCESS_MSG)) {
+				
+				// check if there are dirs
+				serverMsg=fromServerStream.readLine();
+				if (serverMsg.equals(SUCCESS_MSG)) {
+					
+					// get dirs
+					serverMsg=fromServerStream.readLine();
+					
+					dirsSemic = serverMsg;
+					
+					return dirsSemic;
+					
+				}
+				else { // there are no dirs
+					return null;
+					
+				}
+				
+				
+			}
+			else {
+				System.out.println("Problem");
+			}
+		
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		return null;
 	}
 	////////////////////////////////////
 	
@@ -1536,6 +1966,24 @@ public class Client extends JFrame {
 		}
 		return comboBoxYourFiles;
 	}
+	private JComboBox getComboBoxSharedFromTEST() {
+		if (comboBoxSharedFrom == null) {
+			comboBoxSharedFrom = new JComboBox();
+			comboBoxSharedFrom.setModel(new DefaultComboBoxModel(new String[] {"Select user"}));
+			comboBoxSharedFrom.setToolTipText("");
+			comboBoxSharedFrom.setBounds(10, 192, 121, 20);		
+		}
+		return comboBoxSharedFrom;
+	}
+	private JComboBox getComboBoxSharedToTEST() {
+		if (comboBoxSharedTo == null) {
+			comboBoxSharedTo = new JComboBox();
+			comboBoxSharedTo.setModel(new DefaultComboBoxModel(new String[] {"Select user"}));
+			comboBoxSharedTo.setToolTipText("");
+			comboBoxSharedTo.setBounds(144, 252, 96, 20);
+		}
+		return comboBoxSharedTo;
+	}
 	private JLabel getLblWelcome() {
 		if (lblWelcome == null) {
 			lblWelcome = new JLabel("Welcome "+ currentUser.getUsername());
@@ -1574,21 +2022,21 @@ public class Client extends JFrame {
 		if (lblUploadANew == null) {
 			lblUploadANew = new JLabel("Upload a new file");
 			lblUploadANew.setFont(new Font("Tahoma", Font.PLAIN, 14));
-			lblUploadANew.setBounds(10, 268, 134, 20);
+			lblUploadANew.setBounds(10, 332, 134, 20);
 		}
 		return lblUploadANew;
 	}
 	private JLabel getLblEnterFilePath() {
 		if (lblEnterFilePath == null) {
 			lblEnterFilePath = new JLabel("Enter file path:");
-			lblEnterFilePath.setBounds(10, 290, 134, 14);
+			lblEnterFilePath.setBounds(10, 354, 134, 14);
 		}
 		return lblEnterFilePath;
 	}
 	private JTextField getTextFilePath() {
 		if (textFilePath == null) {
 			textFilePath = new JTextField();
-			textFilePath.setBounds(10, 315, 134, 20);
+			textFilePath.setBounds(10, 379, 134, 20);
 			textFilePath.setColumns(10);
 		}
 		return textFilePath;
@@ -1617,28 +2065,28 @@ public class Client extends JFrame {
 	private JLabel getLblWhoSharedWith() {
 		if (lblWhoSharedWith == null) {
 			lblWhoSharedWith = new JLabel("Who shared to you");
-			lblWhoSharedWith.setBounds(10, 105, 121, 14);
+			lblWhoSharedWith.setBounds(10, 169, 121, 14);
 		}
 		return lblWhoSharedWith;
 	}
 	private JLabel getLblShareWith() {
 		if (lblShareWith == null) {
 			lblShareWith = new JLabel("Share to");
-			lblShareWith.setBounds(10, 163, 69, 14);
+			lblShareWith.setBounds(10, 227, 69, 14);
 		}
 		return lblShareWith;
 	}
 	private JLabel getLblTheirFiles() {
 		if (lblTheirFiles == null) {
 			lblTheirFiles = new JLabel("Selected folder: root");
-			lblTheirFiles.setBounds(144, 105, 141, 14);
+			lblTheirFiles.setBounds(144, 169, 141, 14);
 		}
 		return lblTheirFiles;
 	}
 	private JLabel getLblYouSharedTo() {
 		if (lblYouSharedTo == null) {
 			lblYouSharedTo = new JLabel("You shared to");
-			lblYouSharedTo.setBounds(144, 163, 96, 14);
+			lblYouSharedTo.setBounds(144, 227, 96, 14);
 		}
 		return lblYouSharedTo;
 	}
@@ -1646,14 +2094,14 @@ public class Client extends JFrame {
 		if (textShareTo == null) {
 			textShareTo = new JTextField();
 			textShareTo.setColumns(10);
-			textShareTo.setBounds(10, 188, 121, 20);
+			textShareTo.setBounds(10, 252, 121, 20);
 		}
 		return textShareTo;
 	}
 	private JScrollPane getScrollPane() {
 		if (scrollPane == null) {
 			scrollPane = new JScrollPane();
-			scrollPane.setBounds(295, 87, 265, 248);
+			scrollPane.setBounds(295, 87, 266, 312);
 			scrollPane.setViewportView(getTextArea());
 		}
 		return scrollPane;
@@ -1667,4 +2115,6 @@ public class Client extends JFrame {
 		}
 		return lblPremium;
 	}
+	
+
 }

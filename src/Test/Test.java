@@ -30,39 +30,18 @@ public class Test {
 //		FileConvertor.textToFile(json, "src/server/users.json");
 		
 		
-//		String currentPath = "a/b/c/ddd/";
-//		String selectedFile = "a/b/c/ddd/...";
+		String oldPath = "src/server/database/z/nesto.txt";
+		String targetFolder = "src/server/database/za/";
 		
-		String currentPath = "Nesto/";
-		String selectedFileName = "...";
-		String selectedFilePath = currentPath + selectedFileName;
+		File file = new File(oldPath);
 		
-		System.out.println("Path: " + currentPath);
-		System.out.println("Name: " + selectedFileName);
-		System.out.println("FilePath: " + selectedFilePath);
-		System.out.println();
 		
-		selectedFilePath = selectedFilePath.substring(0, selectedFilePath.lastIndexOf("/"));
+		String newPath = targetFolder + file.getName();
 		
-		if (selectedFilePath.contains("/")) {
-			selectedFilePath = selectedFilePath.substring(0, selectedFilePath.lastIndexOf("/"));
-			currentPath = selectedFilePath.substring(0, selectedFilePath.lastIndexOf("/")+1);
-			
-			selectedFileName = selectedFilePath.substring(selectedFilePath.lastIndexOf("/")+1);
-		}
-		else { // GO BACK TO root dir
-			selectedFilePath = null;
-			currentPath = "";
-			
-			selectedFileName = null;
-	
-			
-//			return;
-		}
+				
+		File movedFIle = new File(newPath);
 		
-		System.out.println("Path: " + currentPath);
-		System.out.println("Name: " + selectedFileName);
-		System.out.println("FilePath: " + selectedFilePath);
+		file.renameTo(movedFIle);
 		
 		
 	}

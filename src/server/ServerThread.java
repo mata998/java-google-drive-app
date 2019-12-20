@@ -25,6 +25,11 @@ public class ServerThread extends Thread{
 	static final String SHARE_TO_REQUEST = "***share_to";
 	static final String GETFILES_USER_REQUEST = "***getfilesuser";
 	static final String FILE_FROM_USER_REQUEST = " ***filefromuser";
+	static final String CREATE_FOLDER_REQUEST = "***createfolder";
+	static final String DELETE_FOLDER_REQUEST = "***deletefolder";
+	static final String RENAME_FOLDER_REQUEST = "***renamefolder";
+	static final String MOVE_FILE_REQUEST = "***movefile";
+	static final String FILES_IN_FOLDER = "***filesinfolder";
 	Socket connectionSocket = null;
 	BufferedReader fromClientStream = null;
 	PrintStream toClientStream = null;
@@ -78,6 +83,7 @@ public class ServerThread extends Thread{
 					String username = usspass[0];
 					String password = usspass[1];
 					
+					System.out.println("Wants to login: " + username);
 					
 					// AUTHENTICATION
 					if (Server.authenticate(username, password)) {
@@ -88,9 +94,16 @@ public class ServerThread extends Thread{
 						// get that User object
 						currentUser = Server.getUser(username);
 						
+						System.out.println("Sending obj");
+						
+						// w8 to be sure it syncs with readObj
+						Thread.sleep(200);
+						
 						// send User object to client
 						objectToClientStream.writeObject(currentUser);
 						
+						
+						System.out.println("Obj sent");
 					}
 					else {
 						toClientStream.println(ERROR_MSG);
@@ -319,7 +332,7 @@ public class ServerThread extends Thread{
 				}
 				
 				if (clientMsg.equals(GETUSER_BY_SHARELINK)) {
-					System.out.println("VISIT REQUEST");
+					System.out.println("\nVISIT REQUEST");
 					
 					String shareLink = fromClientStream.readLine();
 					
@@ -331,11 +344,19 @@ public class ServerThread extends Thread{
 					if (user != null) {
 						toClientStream.println(SUCCESS_MSG);
 						
+						System.out.println("User found, sending obj");
+						
 						// Set currentUser to chosen user
 						currentUser = user;
 						
+						// w8 to be sure it syncs with readObj
+						Thread.sleep(200);
+						
 						// Send chosen user to client
 						objectToClientStream.writeObject(user);
+						
+						
+						System.out.println("Obj sent");
 					}
 					else {
 						toClientStream.println(ERROR_MSG);
@@ -407,8 +428,208 @@ public class ServerThread extends Thread{
 					
 				}
 				
+				if (clientMsg.equals(CREATE_FOLDER_REQUEST)) {
+					System.out.println("Create folder request");
+					
+					// Get new folder path
+					clientMsg = fromClientStream.readLine();
+					
+					String newFolderPath = new String(clientMsg);
+					String thisUserPath = "src/server/database/" + currentUser.getUsername() + "/";
+					
+					File newFolder = new File(thisUserPath + newFolderPath);
+					
+					System.out.println("New folder full path: " + thisUserPath + newFolderPath);
+					
+					// Check if that folder already exists
+					if (newFolder.exists() == false) {
+						toClientStream.println(SUCCESS_MSG);
+						
+						// Make folder
+						if (newFolder.mkdir()) {
+							
+							// If its root dir
+							if (newFolderPath.contains("/") == false) {
+								
+								String newFolderName = newFolder.getName();
+								
+								System.out.println("FOLDER NAME: " + newFolderName);
+								
+								// Update user and database
+								currentUser.addFile(newFolderName);
+								Server.updateJsonUsers();
+								
+								
+							}
+							
+							
+							System.out.println("Folder made!");
+							toClientStream.println(SUCCESS_MSG);
+							
+						}
+						else {
+							toClientStream.println(ERROR_MSG);
+						}
+						
+						
+					}
+					else { // that folder exists
+						toClientStream.println(ERROR_MSG);
+						
+					}
+					
+				}
 				
 				
+				if (clientMsg.equals(DELETE_FOLDER_REQUEST)) {
+					
+					// Get folder path
+					clientMsg = fromClientStream.readLine();
+					
+					String folderPath = new String(clientMsg);
+					String thisUserPath = "src/server/database/" + currentUser.getUsername() + "/";
+					
+					File folder = new File(thisUserPath + folderPath);
+					
+					if (folder.exists()) {
+						System.out.println("User wants to delete this and it will be ok: " + thisUserPath + folderPath);
+						
+						// delete folder
+						if (folder.delete()) {
+							
+							// if its in root
+							if (folderPath.indexOf("/") == folderPath.lastIndexOf("/")) {
+								
+								// update database
+								currentUser.removeFile(folderPath.substring(0,folderPath.length()-1));
+								Server.updateJsonUsers();
+								
+							}
+							
+							
+							toClientStream.println(SUCCESS_MSG);
+						}
+						else {
+							toClientStream.println(ERROR_MSG);
+						}
+					}
+					
+					
+				}
+				
+				
+				if (clientMsg.equals(RENAME_FOLDER_REQUEST)) {
+					System.out.println("Rename folder request" );
+					
+					// get targeted folder
+					clientMsg = fromClientStream.readLine();
+					String folderPath = new String(clientMsg);
+					
+					// get new folder name
+					clientMsg = fromClientStream.readLine();
+					String newFolderName = new String(clientMsg);
+					
+					
+					String thisUserPath = "src/server/database/" + currentUser.getUsername() + "/";
+					
+					System.out.println("He wants to rename:");
+					System.out.println(folderPath);
+					System.out.println("to:");
+					System.out.println(newFolderName);
+					
+					
+					File folder = new File(thisUserPath+folderPath);
+					
+					File newFolder = new File(folder.getParent() + "/" + newFolderName);
+					
+					
+					
+					if (folder.renameTo(newFolder)) {
+						
+						// if its in root
+						if (folderPath.contains("/") == false) {
+							
+							// update database
+							currentUser.renameFile(folderPath, newFolderName);
+							Server.updateJsonUsers();
+							
+						}
+						
+						
+						toClientStream.println(SUCCESS_MSG);
+					}
+					else {
+						toClientStream.println(ERROR_MSG);
+					}
+					
+				}
+				
+				
+				if (clientMsg.equals(MOVE_FILE_REQUEST)) {
+					System.out.println("Move request");
+					
+					
+					
+					
+				}
+				
+				
+				if (clientMsg.equals(FILES_IN_FOLDER)) {
+					System.out.println("Dirs in folder request");
+					
+					String userDirectory = "src/server/database/" + currentUser.getUsername() + "/";
+					
+					// getting folder path
+					clientMsg = fromClientStream.readLine();
+					String requestedFolderName = new String(clientMsg);
+					System.out.println("CLIENT REQUESTED: " + requestedFolderName);
+					
+					String requestedFolderPath = userDirectory + requestedFolderName;
+					
+					File folder = new File(requestedFolderPath);
+					
+					// Check if its directory
+					if (folder.isDirectory()) {
+						toClientStream.println(SUCCESS_MSG);
+						
+						
+						
+						String filesInFolder = "";
+						File[] listOfFiles = folder.listFiles();
+						
+						
+						// take all directories
+						for (File x : listOfFiles) {
+							
+							if (x.isDirectory()) {
+								
+								filesInFolder = filesInFolder + x.getName() + ";";
+							}
+							
+						}
+						
+						// if there are no dirs
+						if (filesInFolder.equals("")) {
+							toClientStream.println(ERROR_MSG);
+							
+						}
+						else { // Send dirs
+							toClientStream.println(SUCCESS_MSG);
+							
+							
+							toClientStream.println(filesInFolder);
+							System.out.println("Sent: " + filesInFolder);
+						}
+						
+						
+						
+					}
+					else {
+						toClientStream.println(ERROR_MSG);
+					}
+					
+					
+				}
 				
 				
 			} // end of App actions loop

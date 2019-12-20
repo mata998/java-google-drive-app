@@ -59,6 +59,26 @@ public class User implements Serializable{
 		files.add(newFile);
 	}
 	
+	public void removeFile(String file) {
+		
+		files.remove(file);
+		
+	}
+	
+	public void renameFile(String oldName, String newName) {
+		
+		for (int i = 0; i<files.size(); i++) {
+			
+			if (files.get(i).equals(oldName)) {
+				
+				files.set(i, newName);
+				
+			}
+			
+		}
+		
+	}
+	
 	public void addSharedToUser(String user) {
 		sharedTo.add(user);
 	}
