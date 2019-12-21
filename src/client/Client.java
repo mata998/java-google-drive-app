@@ -2,11 +2,17 @@ package client;
 
 import java.awt.BorderLayout;
 import java.awt.EventQueue;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
+import java.io.OutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Array;
 import java.net.Socket;
@@ -17,6 +23,7 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 import javax.swing.filechooser.FileSystemView;
+
 
 import server.FileConvertor;
 import server.Server;
@@ -93,15 +100,22 @@ public class Client extends JFrame {
 	static final String DELETE_FOLDER_REQUEST = "***deletefolder";
 	static final String RENAME_FOLDER_REQUEST = "***renamefolder";
 	static final String MOVE_FILE_REQUEST = "***movefile";
+	static final String MOVE_TO = "***moveto";
+	static final String MOVE_BACK = "***moveback";
 	static final String FILES_IN_FOLDER = "***filesinfolder";
+	static final String ITS_TXT_FILE = "***itstxt";
+	static final String ITS_BIN_FILE = "***itsbin";
+	static final String DOWNLOAD_BIN = "***downloadbin";
 	Socket connectionSocket = null;
 	BufferedReader fromServerStream = null;
 	PrintStream toServerStream = null;
 	ObjectInputStream objectFromServerStream = null;
+	InputStream is;
 	String serverMsg;
 	User currentUser = new User();
 	String selectedFilePath;
 	String selectedFileName;
+	String selectedFileUser;
 	String currentPath = "";
 	String sharedFromCurrentPath = "";
 	boolean itsVisit = false; ///////
@@ -214,6 +228,8 @@ public class Client extends JFrame {
 						new BufferedReader(
 							new InputStreamReader(
 								connectionSocket.getInputStream()));
+		
+		is = connectionSocket.getInputStream();
 		
 		toServerStream = 
 						new PrintStream(
@@ -483,7 +499,8 @@ public class Client extends JFrame {
 						try {
 							selectedFileName = (String) comboBoxYourFiles.getSelectedItem();
 							selectedFilePath = currentPath + selectedFileName;
-							
+							selectedFileUser = null;
+							 
 							System.out.println("Selected file path: " + selectedFilePath);
 							if (currentUser.getFiles().isEmpty()) {
 								return;
@@ -562,27 +579,47 @@ public class Client extends JFrame {
 							} // If its not directory then its file
 							else {
 								// Get file from server
-								String requestedFileText = "";
-								String oneLine;
 								
-								while (true) {
-									oneLine = fromServerStream.readLine();
+								
+								// if its .txt file
+								serverMsg = fromServerStream.readLine();
+								if (serverMsg.equals(ITS_TXT_FILE)) {
+									String requestedFileText = "";
+									String oneLine;
 									
-									if (oneLine.equals(SUCCESS_MSG)) {
-										break;
+									while (true) {
+										oneLine = fromServerStream.readLine();
+										
+										if (oneLine.equals(SUCCESS_MSG)) {
+											break;
+										}
+										
+										requestedFileText = requestedFileText + oneLine + "\n";
 									}
 									
-									requestedFileText = requestedFileText + oneLine + "\n";
-								}
-								
-								textArea.setText(requestedFileText);
-								
-								if (itsVisit) {
-									lblSelectedFile.setText("Selected file: " + selectedFileName + "  From: " + currentUser.getUsername());
+									textArea.setText(requestedFileText);
+									
+									if (itsVisit) {
+										lblSelectedFile.setText("Selected file: " + selectedFileName + "  From: " + currentUser.getUsername());
+									}
+									else {
+										lblSelectedFile.setText("Selected file: " + selectedFileName);
+									}
+									
 								}
 								else {
-									lblSelectedFile.setText("Selected file: " + selectedFileName);
+									System.out.println("ITS BINARY");
+									
+									if (itsVisit) {
+										lblSelectedFile.setText("Selected file: " + selectedFileName + "  From: " + currentUser.getUsername());
+									}
+									else {
+										lblSelectedFile.setText("Selected file: " + selectedFileName);
+									}
+									
+									textArea.setText("File is binary,\ndownload it to see it");
 								}
+								
 							}
 							
 							
@@ -616,6 +653,7 @@ public class Client extends JFrame {
 				public void actionPerformed(ActionEvent arg0) {
 					try {
 						String filePath = textFilePath.getText();
+						File fileToSend = new File(filePath);
 						
 						if (filePath.equals("")) {
 							JOptionPane.showMessageDialog(
@@ -626,11 +664,7 @@ public class Client extends JFrame {
 							return;
 						}
 						
-						String fileText;
-						try {
-							fileText = FileConvertor.readFile(filePath);
-						}
-						catch (Exception e) {
+						if (fileToSend.exists() == false) {
 							JOptionPane.showMessageDialog(
 									Client.this,
 									"That file doesnt exist!", 
@@ -648,70 +682,161 @@ public class Client extends JFrame {
 							return;
 						}
 						
-						int index1 = filePath.lastIndexOf("\\")+1;
-						int index2 = filePath.lastIndexOf("/")+1;
 						
-						if (index2 >index1) {
-							index1 = index2;
-						}
 						
-						String fileName = filePath.substring(index1);
+						
+						String fileName = fileToSend.getName();
+						
 						
 						// SEND UPLOAD REQUEST
 						toServerStream.println(UPLOAD_REQUEST);
 						System.out.println("i wanna UPLOAD!!!");
 						System.out.println(fileName);
 						
-						// SEND FILE NAME
-						toServerStream.println(fileName);
 						
-						// SEND FILE PATH
-						toServerStream.println(currentPath);
-						
-						// SEND FILE TEXT
-						toServerStream.println(fileText);
-						toServerStream.println(SUCCESS_MSG);
-						
-						// if its all ok
-						serverMsg = fromServerStream.readLine();
-						
-						if (serverMsg.equals(SUCCESS_MSG)) {
-							JOptionPane.showMessageDialog(
-									Client.this,
-									"File uploaded successfully!", 
-									"Success",
-									JOptionPane.INFORMATION_MESSAGE);
+						if (fileName.endsWith(".txt")) {
+							toServerStream.println(ITS_TXT_FILE);
 							
-							// UPDATE CURRENTUSER FILES
-							if (currentUser.getFiles().isEmpty() == false) {
+							// SEND FILE NAME
+							toServerStream.println(fileName);
+							
+							// SEND FILE PATH
+							toServerStream.println(currentPath);
+							
+							
+							String fileText = FileConvertor.readFile(filePath);
+							
+							// SEND FILE TEXT
+							toServerStream.println(fileText);
+							toServerStream.println(SUCCESS_MSG);
+							
+							// if its all ok
+							serverMsg = fromServerStream.readLine();
+							if (serverMsg.equals(SUCCESS_MSG)) {
+								JOptionPane.showMessageDialog(
+										Client.this,
+										"File uploaded successfully!", 
+										"Success",
+										JOptionPane.INFORMATION_MESSAGE);
 								
-								if (currentPath.equals("")) {
-									currentUser.getFiles().add(fileName);									
+								// UPDATE CURRENTUSER FILES
+								if (currentUser.getFiles().isEmpty() == false) {
+									
+									if (currentPath.equals("")) {
+										currentUser.getFiles().add(fileName);									
+									}
+									
+									// UPDATE COMBO BOX
+									comboBoxYourFiles.addItem(fileName);
+									
+									textFilePath.setText("");
 								}
-								
-								// UPDATE COMBO BOX
-								comboBoxYourFiles.addItem(fileName);
-								
-								textFilePath.setText("");
-							}
-							else {
-								
-								if (currentPath=="") {
-									currentUser.getFiles().add(fileName);
+								else {
+									
+									if (currentPath=="") {
+										currentUser.getFiles().add(fileName);
+									}
+									
+									// UPDATE COMBO BOX
+									comboBoxYourFiles.insertItemAt(fileName, 0);
+									comboBoxYourFiles.removeItemAt(1);
+									
+									textFilePath.setText("");
 								}
-								
-								// UPDATE COMBO BOX
-								comboBoxYourFiles.insertItemAt(fileName, 0);
-								comboBoxYourFiles.removeItemAt(1);
-								
-								textFilePath.setText("");
 							}
+							
 						}
-						
-						
-						
-						
-						
+						else {
+							toServerStream.println(ITS_BIN_FILE);
+							
+
+							// SEND FILE NAME
+							toServerStream.println(fileName);
+							
+							// SEND FILE PATH
+							toServerStream.println(currentPath);
+							
+							// from file stream
+							FileInputStream fis = new FileInputStream(fileToSend);
+							BufferedInputStream bis = new BufferedInputStream(fis); 
+							
+							// to server byte stream
+							OutputStream os = connectionSocket.getOutputStream();
+							
+							
+							//Read File Contents into contents array 
+							byte[] contents;
+					        long fileLength = fileToSend.length(); 
+					        long current = 0;
+					         
+					        
+					        Socket transferSocket = new Socket("localhost", 3001);
+					        
+					        os = transferSocket.getOutputStream();
+					        
+					        System.out.println("Sending file... File length: "+fileLength);
+					        while(current!=fileLength){ 
+					            int size = 5000;
+					            if(fileLength - current >= size)
+					                current += size;    
+					            else{ 
+					                size = (int)(fileLength - current); 
+					                current = fileLength;
+					            } 
+					            contents = new byte[size]; 
+					            bis.read(contents, 0, size); 
+					            os.write(contents);
+//					            System.out.println("Sending file ... "+(current*100)/fileLength+"% complete!");
+					            System.out.println("Current: " + current);
+					        }   
+					        
+					        os.flush(); 
+							
+					        //File transfer done
+							bis.close();
+							fis.close();
+							
+							transferSocket.close();
+							
+							System.out.println("FILE SENT");
+							
+							
+							// if its all ok
+							serverMsg = fromServerStream.readLine();
+							if (serverMsg.equals(SUCCESS_MSG)) {
+								JOptionPane.showMessageDialog(
+										Client.this,
+										"File uploaded successfully!", 
+										"Success",
+										JOptionPane.INFORMATION_MESSAGE);
+								
+								// UPDATE CURRENTUSER FILES
+								if (currentUser.getFiles().isEmpty() == false) {
+									
+									if (currentPath.equals("")) {
+										currentUser.getFiles().add(fileName);									
+									}
+									
+									// UPDATE COMBO BOX
+									comboBoxYourFiles.addItem(fileName);
+									
+									textFilePath.setText("");
+								}
+								else {
+									
+									if (currentPath=="") {
+										currentUser.getFiles().add(fileName);
+									}
+									
+									// UPDATE COMBO BOX
+									comboBoxYourFiles.insertItemAt(fileName, 0);
+									comboBoxYourFiles.removeItemAt(1);
+									
+									textFilePath.setText("");
+								}
+							}
+							
+						}
 						
 					}
 					catch (Exception e) {
@@ -759,6 +884,7 @@ public class Client extends JFrame {
 						itsVisit = false;
 						selectedFileName = null;
 						selectedFilePath = null;
+						selectedFileUser = null;
 						currentPath = "";
 						sharedFromCurrentPath = "";
 						
@@ -1024,7 +1150,14 @@ public class Client extends JFrame {
 						lblTheirFiles.setText("Selected folder: root");
 						lblSelectedFile.setText("Selected file: ");
 						
+						/////////////////// ??????????????????///////////////
 						String[] listOfFiles = getFilesFromServer(selectedUser);
+						
+						System.out.print("GOT FILES: ");
+						for (String x : listOfFiles) {
+							System.out.print(x + ";");
+						}
+						System.out.println();
 						
 						if (listOfFiles[0].equals("") == false) {
 							comboBoxTheirFiles.setEnabled(true);
@@ -1098,6 +1231,7 @@ public class Client extends JFrame {
 						
 						selectedFilePath = sharedFromCurrentPath + selectedFileName;
 						String selectedUser = (String) comboBoxSharedFrom.getSelectedItem();
+						selectedFileUser = selectedUser;
 						
 						if (selectedFilePath.equals("Select user") || 
 							selectedFilePath.equals("No files")) 
@@ -1121,6 +1255,7 @@ public class Client extends JFrame {
 							else { // GO BACK TO root folder
 								selectedFilePath = null;
 								sharedFromCurrentPath = "";
+								selectedFileUser = null;
 								
 								
 								String[] listOfFiles = getFilesFromServer(selectedUser);
@@ -1193,27 +1328,46 @@ public class Client extends JFrame {
 						}
 						else {
 							// Get file from server
-							String requestedFileText = "";
-							String oneLine;
 							
-							while (true) {
-								oneLine = fromServerStream.readLine();
+							System.out.println("Check if its txt or bin");
+							
+							// check if its .txt or bin
+							serverMsg = fromServerStream.readLine();
+							if (serverMsg.equals(ITS_TXT_FILE)) {
+								String requestedFileText = "";
+								String oneLine;
 								
-								if (oneLine.equals(SUCCESS_MSG)) {
-									break;
+								System.out.println("Waiting for txt file");
+								while (true) {
+									oneLine = fromServerStream.readLine();
+									
+									if (oneLine.equals(SUCCESS_MSG)) {
+										break;
+									}
+									
+									requestedFileText = requestedFileText + oneLine + "\n";
 								}
 								
-								requestedFileText = requestedFileText + oneLine + "\n";
+								textArea.setText(requestedFileText);
+								lblSelectedFile.setText("You selected: " + selectedFileName + "  From: " + selectedUser);
+								System.out.println("got file");
+								
 							}
-							
-							textArea.setText(requestedFileText);
-							lblSelectedFile.setText("You selected: " + selectedFileName + "  From: " + selectedUser);
+							else { // its bin file
+								System.out.println("I WANTED BIN");
+								
+								
+								lblSelectedFile.setText("You selected: " + selectedFileName + "  From: " + selectedUser);
+								textArea.setText("File is binary,\ndownload it to see it");
+								
+							}
 							
 						}
 						
 						
 					}
 					catch (Exception e) {
+						e.printStackTrace();
 						System.out.println("SERVER IS DOWN");
 						
 						JOptionPane.showMessageDialog(
@@ -1248,9 +1402,9 @@ public class Client extends JFrame {
 						return;
 					}
 					
-					String selectedFileText = textArea.getText().trim();					
+										
+					// FILE CHOOSER
 					String fileDirectory = "";
-					
 			
 					JFileChooser j = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory()); 
 		            j.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
@@ -1264,14 +1418,109 @@ public class Client extends JFrame {
 		            	return;
 		            }
 		            
-					FileConvertor.textToFile(selectedFileText, fileDirectory+selectedFileName);
-					System.out.println();
-					
-					JOptionPane.showMessageDialog(
-							Client.this,
-							"File dowloaded!", 
-							"Success",
-							JOptionPane.INFORMATION_MESSAGE);
+		            // if its .txt file
+		            if (selectedFileName.endsWith(".txt")) {
+		            	String selectedFileText = textArea.getText().trim();
+						FileConvertor.textToFile(selectedFileText, fileDirectory+selectedFileName);
+						
+						JOptionPane.showMessageDialog(
+								Client.this,
+								"File dowloaded!", 
+								"Success",
+								JOptionPane.INFORMATION_MESSAGE);
+		            
+		            }
+		            else { // if its BIN file
+		            	try {
+		            		System.out.println("DOWNLOAD BIN");
+
+		            		toServerStream.println(DOWNLOAD_BIN);
+		            		
+		            		// send file path
+		            		toServerStream.println(selectedFilePath);
+		            		
+		            		
+		            		// if its download from self files
+		            		if (selectedFileUser == null) {
+		            			
+		            			// send my userName
+		            			toServerStream.println(currentUser.getUsername());
+		            		
+		            		}
+		            		else {
+		            			// send selectedUser
+		            			toServerStream.println(selectedFileUser);
+		            			
+							}
+		            		
+		            		
+		            		byte[] contents = new byte[5000];
+		                    
+		                    //Initialize the FileOutputStream to the output file's full path.
+		                    FileOutputStream fos = new FileOutputStream(fileDirectory+selectedFileName);
+		                    BufferedOutputStream bos = new BufferedOutputStream(fos);
+		                    
+		                    
+		                    long fileLength;
+		                    long current = 0;
+		                    
+		                    //No of bytes read in one read() call
+		                    int bytesRead = 0; 
+		                    
+		                    System.out.println("Geting file...");
+		                    
+		    
+		                    // Reading and writing		                    
+		                    Socket transferSocket = new Socket("localhost", 3001);
+		                    
+		                    is = transferSocket.getInputStream();
+		                    
+		                    while((bytesRead=is.read(contents))!=-1) {
+		                    	
+		                        bos.write(contents, 0, bytesRead); 
+		                        
+		                        current += bytesRead;
+		                        
+		                        System.out.println("Current: " + current);
+		                        
+		                    }
+		                    
+		                    bos.flush();
+		                    
+		                    fos.close();
+		                    bos.close();
+		                    transferSocket.close();
+		                    
+		                    System.out.println("DOWNLOAD SUCCESSFULL");
+		            		
+		                    
+		            		JOptionPane.showMessageDialog(
+									Client.this,
+									"FILE DOWNLOADED!", 
+									"Success",
+									JOptionPane.INFORMATION_MESSAGE);
+		            		
+		            		
+		            		
+		            		
+		            		
+		            		
+
+							
+						} catch (Exception e) {
+							e.printStackTrace();
+							JOptionPane.showMessageDialog(
+									Client.this,
+									"Server not working", 
+									"Error",
+									JOptionPane.INFORMATION_MESSAGE);
+							dispose();
+						}
+		            	
+		            	
+		            	
+					}
+		            
 				}
 			});
 			btnDownload.setBounds(295, 410, 100, 23);
@@ -1463,6 +1712,7 @@ public class Client extends JFrame {
 								// go back to root dir
 								selectedFilePath = null;
 								currentPath = "";
+								selectedFileUser = null;
 								
 								comboBoxYourFiles.setModel(new DefaultComboBoxModel(currentUser.getFilesStringArr()));
 								
@@ -1574,6 +1824,7 @@ public class Client extends JFrame {
 				// go back to root dir
 				selectedFilePath = null;
 				currentPath = "";
+				selectedFileUser = null;
 				
 				comboBoxYourFiles.setModel(new DefaultComboBoxModel(currentUser.getFilesStringArr()));
 				
@@ -1630,19 +1881,14 @@ public class Client extends JFrame {
 							return;
 						}
 						
-						System.out.println("File path: " + selectedFilePath);
-						System.out.println("Current folder: " + currentPath);
-						
 						
 						// get dirs in this folder
 						
 						String dirsHereSemic = dirsInFolder(currentPath);
 						
-						System.out.println("Dirsheresemic: " + dirsHereSemic);
 						
 						if (dirsHereSemic != null) {
 							
-//							MoveFile moveFileJDialog = new MoveFile(Client.this, dirsHereSemic.split(";"));
 							MoveFile moveFileJDialog = new MoveFile(Client.this, dirsHereSemic);
 							
 							moveFileJDialog.setVisible(true);
@@ -1704,6 +1950,163 @@ public class Client extends JFrame {
 		}
 		
 		return null;
+	}
+	
+	public void moveFile(String mode, String selectedFolder ) {
+		try {
+		
+			toServerStream.println(MOVE_FILE_REQUEST);
+			
+			if (mode.equals("move to")) {
+				toServerStream.println(MOVE_TO);
+				
+				String fromPath = selectedFilePath;
+				String destinationPath = currentPath + selectedFolder + "/";
+				
+				
+				System.out.println("From path: " + fromPath);
+				System.out.println("Destination: " + destinationPath);
+				
+				// send from path
+				toServerStream.println(fromPath);
+				
+				// send destination folder
+				toServerStream.println(destinationPath);
+				
+				
+				// check if its deleted
+				serverMsg = fromServerStream.readLine();
+				if (serverMsg.equals(SUCCESS_MSG)) {
+					
+					
+					// if you move file thats in the root
+					if (fromPath.contains("/") == false) {
+						
+						currentUser.removeFile(fromPath);
+						
+						System.out.println("Remove: " + fromPath);
+
+						
+					}
+					
+					
+					
+					// go back to root dir
+					selectedFilePath = null;
+					currentPath = "";
+					selectedFileUser = null;
+					
+					comboBoxYourFiles.setModel(new DefaultComboBoxModel(currentUser.getFilesStringArr()));
+					
+					lblSelectedFile.setText("Selected file: ");
+					lblYourFiles.setText("Selected folder: root");
+					textArea.setText("");
+					selectedFileName = null;
+					
+					JOptionPane.showMessageDialog(
+							Client.this,
+							"File moved!", 
+							"Success",
+							JOptionPane.INFORMATION_MESSAGE);
+					
+					
+					
+				}
+				else {
+					JOptionPane.showMessageDialog(
+							Client.this,
+							"File could not be moved", 
+							"Error",
+							JOptionPane.ERROR_MESSAGE);
+					
+				}
+				
+			}
+			else if (mode.equals("move back")) {
+				toServerStream.println(MOVE_BACK);
+				
+				String fromPath = selectedFilePath;
+				
+				// it must be in some folder
+				if (fromPath.contains("/")) {
+					
+					// send file path
+					toServerStream.println(fromPath);
+					
+					// check if it moved successfully
+					serverMsg = fromServerStream.readLine();
+					if (serverMsg.equals(SUCCESS_MSG)) {
+						
+						
+						// if it moved to root
+						if (fromPath.indexOf("/") == fromPath.lastIndexOf("/")) {
+							
+							
+							currentUser.addFile(fromPath.substring(fromPath.indexOf("/")+1));
+							System.out.println("Added to root: " + fromPath.substring(fromPath.indexOf("/")+1));               
+							
+						}
+						
+						
+						// go back to root dir
+						selectedFilePath = null;
+						currentPath = "";
+						selectedFileUser = null;
+						
+						comboBoxYourFiles.setModel(new DefaultComboBoxModel(currentUser.getFilesStringArr()));
+						
+						lblSelectedFile.setText("Selected file: ");
+						lblYourFiles.setText("Selected folder: root");
+						textArea.setText("");
+						selectedFileName = null;
+						
+						JOptionPane.showMessageDialog(
+								Client.this,
+								"File moved!", 
+								"Success",
+								JOptionPane.INFORMATION_MESSAGE);
+						
+					}
+					else {
+						JOptionPane.showMessageDialog(
+								Client.this,
+								"Server couldn't move file", 
+								"Error",
+								JOptionPane.ERROR_MESSAGE);
+					}
+					
+					
+				}
+				else { // cant move back folder thats in root
+					
+					toServerStream.println(ERROR_MSG);
+					
+					JOptionPane.showMessageDialog(
+							Client.this,
+							"File is in root, can't move back", 
+							"Error",
+							JOptionPane.ERROR_MESSAGE);
+					
+					return;
+				}
+				
+				
+			}
+			
+			
+		
+		}
+		catch (Exception e) {
+			System.out.println("Server down");
+			
+			JOptionPane.showMessageDialog(
+					Client.this,
+					"Server stopped working", 
+					"Error",
+					JOptionPane.ERROR_MESSAGE);
+			
+			dispose();
+		}
 	}
 	////////////////////////////////////
 	

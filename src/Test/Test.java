@@ -30,19 +30,16 @@ public class Test {
 //		FileConvertor.textToFile(json, "src/server/users.json");
 		
 		
-		String oldPath = "src/server/database/z/nesto.txt";
-		String targetFolder = "src/server/database/za/";
+//		String oldPath = "src/server/database/p1/Folder1/Folder2/F3/nesto.txt";
+//		File file = new File(oldPath);
+//		
+//		String newPath = (new File(file.getParent()).getParent()) + "/" + file.getName(); 
+//		
+//		
+//		System.out.println(newPath);
 		
-		File file = new File(oldPath);
 		
-		
-		String newPath = targetFolder + file.getName();
-		
-				
-		File movedFIle = new File(newPath);
-		
-		file.renameTo(movedFIle);
-		
+//		System.out.println(Integer.toString(5));
 		
 	}
 	

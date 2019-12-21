@@ -1,1 +1,211 @@
-[{"username":"mata998","password":"lozinka123","files":["posalji me.txt","posalji.txt","jos.txt","nesto drugo.txt","ovo.txt"],"link":"superdrive.com/visit/mata998","linkOn":true,"isPremium":false,"sharedTo":["a"],"sharedFrom":["a","b"]},{"username":"pera998","password":"lozinka456","files":["svasta.txt"],"link":"superdrive.com/visit/pera998","linkOn":false,"isPremium":false,"sharedTo":[],"sharedFrom":[]},{"username":"zika998","password":"lozinka789","files":["posalji.txt","posalji me.txt"],"link":"superdrive.com/visit/zika998","linkOn":false,"isPremium":false,"sharedTo":[],"sharedFrom":[]},{"username":"a","password":"a","files":["nesto.txt","nesto drugo.txt","posalji.txt","pocetak.txt","jos.txt"],"link":"superdrive.com/visit/a","linkOn":true,"isPremium":false,"sharedTo":["mata998","b","c"],"sharedFrom":["b","mata998","p1"]},{"username":"b","password":"b","files":["posalji.txt"],"link":"superdrive.com/visit/b","linkOn":false,"isPremium":false,"sharedTo":["a","mata998"],"sharedFrom":["a"]},{"username":"c","password":"c","files":["posalji.txt","jos.txt","Matlab sve funkcije by mata.txt","ovo.txt"],"link":"superdrive.com/visit/c","linkOn":false,"isPremium":false,"sharedTo":[],"sharedFrom":["a"]},{"username":"d","password":"d","files":["jos.txt","posalji.txt"],"link":"superdrive.com/visit/d","linkOn":false,"isPremium":false,"sharedTo":[],"sharedFrom":[]},{"username":"e","password":"e","files":["nesto.txt"],"link":"superdrive.com/visit/e","linkOn":false,"isPremium":false,"sharedTo":[],"sharedFrom":[]},{"username":"z","password":"z","files":["jos.txt","nesto.txt","ovo.txt"],"link":"superdrive.com/visit/z","linkOn":false,"isPremium":false,"sharedTo":[],"sharedFrom":[]},{"username":"za","password":"za","files":["jos.txt"],"link":"superdrive.com/visit/za","linkOn":false,"isPremium":false,"sharedTo":[],"sharedFrom":[]},{"username":"ma","password":"ma","files":[],"link":"superdrive.com/visit/ma","linkOn":false,"isPremium":false,"sharedTo":[],"sharedFrom":[]},{"username":"p1","password":"p1","files":["jos.txt","Nesto","PrazanDir","Folder","posalji.txt","pocetak.txt","Idemo lagano","Novi jebacki folder","Ma lagaan"],"link":"superdrive.com/visit/p1","linkOn":true,"isPremium":true,"sharedTo":["a"],"sharedFrom":[]}]
+[
+	{
+		"username": "mata998",
+		"password": "lozinka123",
+		"files": [
+			"posalji me.txt",
+			"posalji.txt",
+			"jos.txt",
+			"nesto drugo.txt",
+			"ovo.txt"
+		],
+		"link": "superdrive.com/visit/mata998",
+		"linkOn": true,
+		"isPremium": false,
+		"sharedTo": [
+			"a"
+		],
+		"sharedFrom": [
+			"a",
+			"b"
+		]
+	},
+	{
+		"username": "pera998",
+		"password": "lozinka456",
+		"files": [
+			"svasta.txt"
+		],
+		"link": "superdrive.com/visit/pera998",
+		"linkOn": false,
+		"isPremium": false,
+		"sharedTo": [
+		],
+		"sharedFrom": [
+		]
+	},
+	{
+		"username": "zika998",
+		"password": "lozinka789",
+		"files": [
+			"posalji.txt",
+			"posalji me.txt",
+			"zz.jpg"
+		],
+		"link": "superdrive.com/visit/zika998",
+		"linkOn": false,
+		"isPremium": false,
+		"sharedTo": [
+		],
+		"sharedFrom": [
+		]
+	},
+	{
+		"username": "a",
+		"password": "a",
+		"files": [
+			"nesto drugo.txt",
+			"aa.jpg",
+			"aa.docx",
+			"bb.jpg"
+		],
+		"link": "superdrive.com/visit/a",
+		"linkOn": true,
+		"isPremium": false,
+		"sharedTo": [
+			"mata998",
+			"b",
+			"c"
+		],
+		"sharedFrom": [
+			"b",
+			"mata998",
+			"p1"
+		]
+	},
+	{
+		"username": "b",
+		"password": "b",
+		"files": [
+			"posalji.txt"
+		],
+		"link": "superdrive.com/visit/b",
+		"linkOn": false,
+		"isPremium": false,
+		"sharedTo": [
+			"a",
+			"mata998"
+		],
+		"sharedFrom": [
+			"a"
+		]
+	},
+	{
+		"username": "c",
+		"password": "c",
+		"files": [
+			"posalji.txt",
+			"jos.txt",
+			"Matlab sve funkcije by mata.txt",
+			"ovo.txt"
+		],
+		"link": "superdrive.com/visit/c",
+		"linkOn": false,
+		"isPremium": false,
+		"sharedTo": [
+		],
+		"sharedFrom": [
+			"a"
+		]
+	},
+	{
+		"username": "d",
+		"password": "d",
+		"files": [
+			"jos.txt",
+			"posalji.txt"
+		],
+		"link": "superdrive.com/visit/d",
+		"linkOn": false,
+		"isPremium": false,
+		"sharedTo": [
+		],
+		"sharedFrom": [
+		]
+	},
+	{
+		"username": "e",
+		"password": "e",
+		"files": [
+			"nesto.txt"
+		],
+		"link": "superdrive.com/visit/e",
+		"linkOn": false,
+		"isPremium": false,
+		"sharedTo": [
+		],
+		"sharedFrom": [
+		]
+	},
+	{
+		"username": "z",
+		"password": "z",
+		"files": [
+			"jos.txt",
+			"nesto.txt",
+			"ovo.txt",
+			"posalji.txt",
+			"pocetak.txt"
+		],
+		"link": "superdrive.com/visit/z",
+		"linkOn": false,
+		"isPremium": false,
+		"sharedTo": [
+		],
+		"sharedFrom": [
+		]
+	},
+	{
+		"username": "za",
+		"password": "za",
+		"files": [
+			"jos.txt",
+			"pocetak.txt"
+		],
+		"link": "superdrive.com/visit/za",
+		"linkOn": false,
+		"isPremium": false,
+		"sharedTo": [
+		],
+		"sharedFrom": [
+		]
+	},
+	{
+		"username": "ma",
+		"password": "ma",
+		"files": [
+		],
+		"link": "superdrive.com/visit/ma",
+		"linkOn": false,
+		"isPremium": false,
+		"sharedTo": [
+		],
+		"sharedFrom": [
+		]
+	},
+	{
+		"username": "p1",
+		"password": "p1",
+		"files": [
+			"jos.txt",
+			"Nesto",
+			"PrazanDir",
+			"Folder",
+			"pocetak.txt",
+			"Idemo lagano",
+			"Novi jebacki folder",
+			"Ma lagaan",
+			"nesto.txt",
+			"ovo.txt",
+			"aa.docx"
+		],
+		"link": "superdrive.com/visit/p1",
+		"linkOn": true,
+		"isPremium": true,
+		"sharedTo": [
+			"a"
+		],
+		"sharedFrom": [
+		]
+	}
+]

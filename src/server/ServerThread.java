@@ -1,10 +1,17 @@
 package server;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.io.PrintStream;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.util.List;
@@ -29,21 +36,28 @@ public class ServerThread extends Thread{
 	static final String DELETE_FOLDER_REQUEST = "***deletefolder";
 	static final String RENAME_FOLDER_REQUEST = "***renamefolder";
 	static final String MOVE_FILE_REQUEST = "***movefile";
+	static final String MOVE_TO = "***moveto";
+	static final String MOVE_BACK = "***moveback";
 	static final String FILES_IN_FOLDER = "***filesinfolder";
+	static final String ITS_TXT_FILE = "***itstxt";
+	static final String ITS_BIN_FILE = "***itsbin";
+	static final String DOWNLOAD_BIN = "***downloadbin";
 	Socket connectionSocket = null;
 	BufferedReader fromClientStream = null;
 	PrintStream toClientStream = null;
 	ObjectOutputStream objectToClientStream = null;
 	String clientMsg;
 	User currentUser = null;
-
+	ServerSocket transferServerSocket=null;
+	
 	
 
 	
 	// Constructor
-	public ServerThread(Socket connectionSocket) {
+	public ServerThread(Socket connectionSocket, ServerSocket transferServerSocket) {
 		super();
 		this.connectionSocket = connectionSocket;
+		this.transferServerSocket = transferServerSocket;
 	}
 
 	
@@ -61,7 +75,11 @@ public class ServerThread extends Thread{
 					new PrintStream(
 						connectionSocket.getOutputStream());
 			
+			InputStream is = connectionSocket.getInputStream();
+			
 			objectToClientStream = new ObjectOutputStream(connectionSocket.getOutputStream());
+			
+			
 			
 			
 			// APP ACTIONS LOOP
@@ -208,13 +226,100 @@ public class ServerThread extends Thread{
 					}
 					else { // If its a file, send file content
 						toClientStream.println(SUCCESS_MSG);
-						String requestedFileText = FileConvertor.readFile(requestedFilePath);
 						
-						toClientStream.println(requestedFileText);
-						toClientStream.println(SUCCESS_MSG);
+						
+						// if its .txt file
+						if (requestedFilePath.endsWith(".txt")) {
+							toClientStream.println(ITS_TXT_FILE);
+							
+							String requestedFileText = FileConvertor.readFile(requestedFilePath);
+							
+							toClientStream.println(requestedFileText);
+							toClientStream.println(SUCCESS_MSG);
+						
+						}
+						else { // if its bin
+							toClientStream.println(ITS_BIN_FILE);
+							System.out.println("SEND BINARY");
+							
+							
+					        
+						}
+						
 					}
 					
 					
+				}
+				
+				
+				if (clientMsg.equals(DOWNLOAD_BIN)) {
+					System.out.println("DOWNLOAD BIN REQUEST");
+					
+					
+					// get file path
+					clientMsg = fromClientStream.readLine();
+					String requestedFilePath = new String(clientMsg);
+					
+					// get selectedUser
+					clientMsg = fromClientStream.readLine();
+					String selectedUser = new String(clientMsg);
+					
+					String userDirectory = "src/server/database/" + selectedUser + "/";
+					
+					
+					String requestedFileFullPath = userDirectory + requestedFilePath;
+					
+					System.out.println("Requested: " + requestedFileFullPath);
+					
+					//////////////////////////////////////////////////////////////
+										
+					// from file stream
+					File fileToSend = new File(requestedFileFullPath);
+					FileInputStream fis = new FileInputStream(fileToSend);
+					BufferedInputStream bis = new BufferedInputStream(fis); 
+					
+					// to client byte stream
+					OutputStream os = connectionSocket.getOutputStream();
+					
+					
+					//Read File Contents into contents array 
+					byte[] contents;
+			        long fileLength = fileToSend.length(); 
+			        long current = 0;
+			         
+			        
+			        
+			        Socket transferSokcet = transferServerSocket.accept();
+			        os = transferSokcet.getOutputStream();
+			        
+			        System.out.println("Sending file...");
+			        while(current!=fileLength){ 
+			            int size = 5000;
+			            if(fileLength - current >= size)
+			                current += size;    
+			            else{ 
+			                size = (int)(fileLength - current); 
+			                current = fileLength;
+			            } 
+			            contents = new byte[size]; 
+			            bis.read(contents, 0, size); 
+			            os.write(contents);
+//			            System.out.println("Sending file ... "+(current*100)/fileLength+"% complete!");
+			            System.out.println("Current: " + current);
+			        }   
+			        
+			        
+			        os.flush(); 
+					
+			        //File transfer done
+					bis.close();
+					fis.close();
+					
+					transferSokcet.close();
+					
+					
+					
+					System.out.println("FILE SENT");
 				}
 				
 				if (clientMsg.equals(FILE_FROM_USER_REQUEST)) {
@@ -260,10 +365,26 @@ public class ServerThread extends Thread{
 					else {
 						toClientStream.println(SUCCESS_MSG);
 						
-						String requestedFileText = FileConvertor.readFile(requestedFilePath);
+						// if its .txt file
+						if (requestedFilePath.endsWith(".txt")) {
+							toClientStream.println(ITS_TXT_FILE);
+							System.out.println("Send that its txt");
+							
+							String requestedFileText = FileConvertor.readFile(requestedFilePath);
+							
+							toClientStream.println(requestedFileText);
+							toClientStream.println(SUCCESS_MSG);
 						
-						toClientStream.println(requestedFileText);
-						toClientStream.println(SUCCESS_MSG);
+							
+						} // if its BIN file
+						else {
+							toClientStream.println(ITS_BIN_FILE);
+							
+							System.out.println("Send that its BIN");
+							
+						}
+					
+						
 					}
 					
 				}
@@ -272,52 +393,137 @@ public class ServerThread extends Thread{
 				if (clientMsg.equals(UPLOAD_REQUEST)) {
 					System.out.println("UPLOAD REQUEST");
 					
-					// GET NEW FILE NAME
+					
+					// check if its TXT or BIN
 					clientMsg = fromClientStream.readLine();
-					String newFileName = new String(clientMsg);
-					System.out.println("client wants to upload: " + newFileName);
-					
-					// GET FILE PATH
-					clientMsg = fromClientStream.readLine();
-					String newFilePath = new String(clientMsg);
-					
-					// GET NEW FILE TEXT
-					String newFileText = "";
-					String oneLine;
-					
-					while (true) {
-						oneLine = fromClientStream.readLine();
+					if (clientMsg.equals(ITS_TXT_FILE)) {
+						// GET NEW FILE NAME
+						clientMsg = fromClientStream.readLine();
+						String newFileName = new String(clientMsg);
+						System.out.println("client wants to upload: " + newFileName);
 						
-						if (oneLine.equals(SUCCESS_MSG)) {
-							break;
+						// GET FILE PATH
+						clientMsg = fromClientStream.readLine();
+						String newFilePath = new String(clientMsg);
+						
+						// GET NEW FILE TEXT
+						String newFileText = "";
+						String oneLine;
+						
+						while (true) {
+							oneLine = fromClientStream.readLine();
+							
+							if (oneLine.equals(SUCCESS_MSG)) {
+								break;
+							}
+							
+							newFileText = newFileText + oneLine + "\n";
 						}
 						
-						newFileText = newFileText + oneLine + "\n";
-					}
-					
-					System.out.println("FILE RECIVED");
-					
-					
-					// MAKE THAT FILE
-					String newFileDirectory = "src/server/database/"+currentUser.getUsername() + "/" + newFilePath;
-					
-					FileConvertor.textToFile(newFileText, newFileDirectory + newFileName);
-					System.out.println("FILE CREATED");
-					
-					
-					// update database only if file is not added to folder
-					if (newFilePath.equals("")) {
-						// ADD IT TO currentUser
-						currentUser.addFile(newFileName);
+						System.out.println("FILE RECIVED");
 						
-						// UPDATE JSON DATABASE
-						Server.updateJsonUsers();
-						System.out.println("DATABASE UPDATED");
+						
+						// MAKE THAT FILE
+						String newFileDirectory = "src/server/database/"+currentUser.getUsername() + "/" + newFilePath;
+						
+						FileConvertor.textToFile(newFileText, newFileDirectory + newFileName);
+						
+						
+						
+						System.out.println("FILE CREATED");
+						
+						
+						// update database only if file is not added to folder
+						if (newFilePath.equals("")) {
+							// ADD IT TO currentUser
+							currentUser.addFile(newFileName);
+							
+							// UPDATE JSON DATABASE
+							Server.updateJsonUsers();
+							System.out.println("DATABASE UPDATED");
+						}
+						
+						
+						// inform client that its ok
+						toClientStream.println(SUCCESS_MSG);
+					}
+					else {
+						// GET NEW FILE NAME
+						clientMsg = fromClientStream.readLine();
+						String newFileName = new String(clientMsg);
+						System.out.println("client wants to upload: " + newFileName);
+						
+						// GET FILE PATH
+						clientMsg = fromClientStream.readLine();
+						String newFilePath = new String(clientMsg);
+						
+						String newFileDirectory = "src/server/database/"+currentUser.getUsername() + "/" + newFilePath;
+						
+						
+						////////////
+						byte[] contents = new byte[5000];
+	                    
+	                    //Initialize the FileOutputStream to the output file's full path.
+	                    FileOutputStream fos = new FileOutputStream(newFileDirectory + newFileName);
+	                    BufferedOutputStream bos = new BufferedOutputStream(fos);
+	                    
+	                    
+	                    long fileLength;
+	                    long current = 0;
+	                    
+	                    
+	                    //No of bytes read in one read() call
+	                    int bytesRead = 0; 
+	                    
+	                    System.out.println("Getting file..");
+	                    
+	                    Socket transferSocket = transferServerSocket.accept();
+	                    
+	                    is = transferSocket.getInputStream();
+	                    
+	                    // Reading and writing
+	                    while((bytesRead= is.read(contents)) != -1 ) {
+	                    	
+	                    	
+	                        bos.write(contents, 0, bytesRead); 
+	                        
+	                        current += bytesRead;
+	                        
+	                        System.out.println("Current: " + current);
+	                    }
+	                    
+	                    bos.flush();
+	                    
+	                    fos.close();
+	                    bos.close();
+	                    
+	                    transferSocket.close();
+	                    
+	                    System.out.println("GOT FILE");
+	                    
+	                    
+	                    System.out.println("FILE CREATED");
+						
+						
+						// update database only if file is not added to folder
+						if (newFilePath.equals("")) {
+							// ADD IT TO currentUser
+							currentUser.addFile(newFileName);
+							
+							// UPDATE JSON DATABASE
+							Server.updateJsonUsers();
+							System.out.println("DATABASE UPDATED");
+						}
+						
+						
+						// inform client that its ok
+						toClientStream.println(SUCCESS_MSG);
 					}
 					
 					
-					// inform client that its ok
-					toClientStream.println(SUCCESS_MSG);
+					
+					
+					
 				}
 				
 				if (clientMsg.equals(LINKONCHANGE_REQUEST)) {
@@ -414,6 +620,8 @@ public class ServerThread extends Thread{
 					// Get target username from client
 					clientMsg = fromClientStream.readLine();
 					targetUsername = clientMsg;
+					
+					System.out.println("REQUESTED FOR: "  + targetUsername);
 					
 					// Get files
 					filesSemicol = Server.getFilesFromUserSemiCol(targetUsername);
@@ -568,6 +776,89 @@ public class ServerThread extends Thread{
 				if (clientMsg.equals(MOVE_FILE_REQUEST)) {
 					System.out.println("Move request");
 					
+					String userDirectory = "src/server/database/" + currentUser.getUsername() + "/";
+					String fromPath;
+					String destinationPath;
+					
+					// check if its move to or move back
+					clientMsg = fromClientStream.readLine();
+					if (clientMsg.equals(MOVE_TO)) {
+						
+						// get from path
+						clientMsg = fromClientStream.readLine();
+						fromPath = new String(clientMsg);
+						
+						// get destinationPath
+						clientMsg = fromClientStream.readLine();
+						destinationPath = new String(clientMsg);
+
+						File oldFile = new File(userDirectory + fromPath);
+								
+						File newFile = new File(userDirectory + destinationPath + oldFile.getName());
+						
+						
+						// move file
+						if (oldFile.renameTo(newFile)) {
+							toClientStream.println(SUCCESS_MSG);
+							
+							// if its in root
+							if (fromPath.contains("/") == false) {
+								
+								// update database
+								currentUser.removeFile(fromPath);
+								Server.updateJsonUsers();
+								
+							}
+							
+							
+						}
+						else {
+							toClientStream.print(ERROR_MSG);
+							
+						}
+						
+					} // if its move back
+					else if (clientMsg.equals(MOVE_BACK)) {
+						
+						
+						// client sends file path if its not in root
+						clientMsg = fromClientStream.readLine();
+						if (clientMsg.equals(ERROR_MSG) == false) {
+							
+							fromPath = new String(clientMsg);
+							
+							File file = new File(userDirectory + fromPath);
+							
+							String newPath = (new File(file.getParent()).getParent()) + "/" + file.getName(); 
+							
+							File newFile = new File(newPath);
+							
+							if  (file.renameTo(newFile)) {
+								
+								
+								// if it moved to root
+								if (fromPath.indexOf("/") == fromPath.lastIndexOf("/")) {
+									
+									// update database
+									currentUser.addFile(newFile.getName());
+									Server.updateJsonUsers();
+									
+									System.out.println("Added: " + newFile.getName());
+								}
+								
+								// inform that it was successful
+								toClientStream.println(SUCCESS_MSG);
+							}
+							else {
+								
+								toClientStream.println(ERROR_MSG);
+							}
+							
+						}
+						
+						
+					}
+					
 					
 					
 					
@@ -636,6 +927,7 @@ public class ServerThread extends Thread{
 			
 			
 		} catch (Exception e) {
+			e.printStackTrace();
 			System.out.println("Client dissconected");
 			
 			Server.listOfThreads.remove(this);

@@ -40,7 +40,6 @@ public class MoveFile extends JDialog {
 			this.folders = foldersSemic.split(";");
 		}
 		
-		System.out.println("FOLDERS SEMIC: " + this.foldersSemic);    
 		
 		constructor();
 	}
@@ -74,15 +73,17 @@ public class MoveFile extends JDialog {
 			btnMoveBack.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
 					
+					parent.moveFile("move back", "");
 					
+					dispose();
 				}
 			});
-			btnMoveBack.setBounds(10, 98, 89, 23);
+			btnMoveBack.setBounds(10, 130, 89, 23);
 			contentPanel.add(btnMoveBack);
 		}
 		{
 			JLabel lblMoveOneFolder = new JLabel("Move one folder back");
-			lblMoveOneFolder.setBounds(10, 68, 126, 14);
+			lblMoveOneFolder.setBounds(10, 105, 126, 14);
 			contentPanel.add(lblMoveOneFolder);
 		}
 		{
@@ -101,10 +102,11 @@ public class MoveFile extends JDialog {
 			okButton.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
 					
+					String selectedFolder = (String) comboBox.getSelectedItem();
 					
+					parent.moveFile("move to", selectedFolder);
 					
-					
-					
+					dispose();
 				}
 
 				private boolean valid(String newFolderName) {
@@ -177,7 +179,6 @@ public class MoveFile extends JDialog {
 			comboBox = new JComboBox();
 //			comboBox.setModel(new DefaultComboBoxModel(new String[] {"Select folder"}));
 			
-			System.out.println("FOLDERS???: " + folders);
 			
 			if (folders != null) {
 				comboBox.setModel(new DefaultComboBoxModel(folders));

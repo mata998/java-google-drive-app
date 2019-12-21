@@ -22,6 +22,7 @@ public class Server {
 		try {
 			ServerSocket serverSocket = new ServerSocket(3000);
 			System.out.println("Server is running...");
+			ServerSocket transferserverSocket = new ServerSocket(3001);
 			
 			Socket connectionSocket = null;
 			
@@ -29,7 +30,7 @@ public class Server {
 				connectionSocket = serverSocket.accept();
 				System.out.println("\nClient connected!");
 				
-				ServerThread newClient = new ServerThread(connectionSocket);
+				ServerThread newClient = new ServerThread(connectionSocket, transferserverSocket);
 				
 				listOfThreads.add(newClient);
 
