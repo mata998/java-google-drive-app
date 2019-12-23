@@ -110,7 +110,8 @@ public class Client extends JFrame {
 	BufferedReader fromServerStream = null;
 	PrintStream toServerStream = null;
 	ObjectInputStream objectFromServerStream = null;
-	InputStream is;
+	InputStream is = null;
+	OutputStream os = null;
 	String serverMsg;
 	User currentUser = new User();
 	String selectedFilePath;
@@ -229,7 +230,6 @@ public class Client extends JFrame {
 							new InputStreamReader(
 								connectionSocket.getInputStream()));
 		
-		is = connectionSocket.getInputStream();
 		
 		toServerStream = 
 						new PrintStream(
@@ -280,6 +280,15 @@ public class Client extends JFrame {
 							
 							System.out.println("Got object");
 							currentUser.showAll();
+							
+							// get isLinkOn??????
+							serverMsg = fromServerStream.readLine();
+							if (serverMsg.equals(SUCCESS_MSG)) {
+								currentUser.setLinkOn(true);
+							}
+							else {
+								currentUser.setLinkOn(false);
+							}
 							
 							// CHANGE CONTENT PANE
 							Client.this.setContentPane(getAppContentPane());
@@ -478,6 +487,11 @@ public class Client extends JFrame {
 				appContentPane.remove(btnUpload);
 				appContentPane.remove(btnShareTo);
 				appContentPane.remove(btnChoseFile);
+				appContentPane.remove(btnCreate);
+				appContentPane.remove(btnDelete);
+				appContentPane.remove(btnRename);
+				appContentPane.remove(btnMove);
+				
 			}
 			
 		}
@@ -759,9 +773,6 @@ public class Client extends JFrame {
 							// from file stream
 							FileInputStream fis = new FileInputStream(fileToSend);
 							BufferedInputStream bis = new BufferedInputStream(fis); 
-							
-							// to server byte stream
-							OutputStream os = connectionSocket.getOutputStream();
 							
 							
 							//Read File Contents into contents array 
@@ -1460,8 +1471,7 @@ public class Client extends JFrame {
 		                    FileOutputStream fos = new FileOutputStream(fileDirectory+selectedFileName);
 		                    BufferedOutputStream bos = new BufferedOutputStream(fos);
 		                    
-		                    
-		                    long fileLength;
+
 		                    long current = 0;
 		                    
 		                    //No of bytes read in one read() call

@@ -49,7 +49,8 @@ public class ServerThread extends Thread{
 	String clientMsg;
 	User currentUser = null;
 	ServerSocket transferServerSocket=null;
-	
+	InputStream is = null;
+	OutputStream os = null;
 	
 
 	
@@ -75,7 +76,6 @@ public class ServerThread extends Thread{
 					new PrintStream(
 						connectionSocket.getOutputStream());
 			
-			InputStream is = connectionSocket.getInputStream();
 			
 			objectToClientStream = new ObjectOutputStream(connectionSocket.getOutputStream());
 			
@@ -111,17 +111,26 @@ public class ServerThread extends Thread{
 						
 						// get that User object
 						currentUser = Server.getUser(username);
-						
 						System.out.println("Sending obj");
 						
 						// w8 to be sure it syncs with readObj
 						Thread.sleep(200);
 						
+						currentUser.showAll();
 						// send User object to client
 						objectToClientStream.writeObject(currentUser);
+						objectToClientStream.flush();
 						
+						// send is link on????
+						if (currentUser.isLinkOn()) {
+							toClientStream.println(SUCCESS_MSG);
+						}
+						else {
+							toClientStream.println(ERROR_MSG);
+						}
 						
 						System.out.println("Obj sent");
+						
 					}
 					else {
 						toClientStream.println(ERROR_MSG);
@@ -279,7 +288,7 @@ public class ServerThread extends Thread{
 					BufferedInputStream bis = new BufferedInputStream(fis); 
 					
 					// to client byte stream
-					OutputStream os = connectionSocket.getOutputStream();
+					os = connectionSocket.getOutputStream();
 					
 					
 					//Read File Contents into contents array 
@@ -534,6 +543,8 @@ public class ServerThread extends Thread{
 					
 					Server.updateJsonUsers();
 					
+					Server.printUsers(Server.listOfUsers);
+					
 					toClientStream.println(SUCCESS_MSG);
 				}
 				
@@ -577,6 +588,8 @@ public class ServerThread extends Thread{
 					System.out.println("Client dissconected");
 					
 					currentUser = null;
+					
+					Server.printUsers(Server.listOfUsers);
 				}
 				
 				if (clientMsg.equals(SHARE_TO_REQUEST)) {
@@ -927,7 +940,7 @@ public class ServerThread extends Thread{
 			
 			
 		} catch (Exception e) {
-			e.printStackTrace();
+//			e.printStackTrace();
 			System.out.println("Client dissconected");
 			
 			Server.listOfThreads.remove(this);

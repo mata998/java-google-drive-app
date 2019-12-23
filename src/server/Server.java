@@ -20,8 +20,11 @@ public class Server {
 		loadJsonUsers();
 		
 		try {
+			// connecting server
 			ServerSocket serverSocket = new ServerSocket(3000);
 			System.out.println("Server is running...");
+			
+			// transfer server
 			ServerSocket transferserverSocket = new ServerSocket(3001);
 			
 			Socket connectionSocket = null;
@@ -66,7 +69,8 @@ public class Server {
 		System.out.println("\nUsers:");
 		
 		for (User user : list) {
-			System.out.println(" " + user.getUsername());
+//			System.out.println(" " + user.getUsername());
+			user.showAll();
 		}
 		
 		System.out.println();

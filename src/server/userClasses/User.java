@@ -173,6 +173,7 @@ public class User implements Serializable{
 		System.out.println(password);
 		System.out.println("Link: " + link);
 		System.out.println("Link on: " + linkOn);
+		System.out.println("Premium: " + isPremium);
 		System.out.println("Files: ");
 		for (String x : files) {
 			System.out.println(" " + x);
